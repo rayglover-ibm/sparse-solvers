@@ -1,0 +1,9 @@
+[submodule "third_party/DownloadProject"]
+	path = third_party/DownloadProject
+	url = https://github.com/Crascit/DownloadProject.git
+[submodule "third_party/kernelpp"]
+	path = third_party/kernelpp
+	url = https://github.com/rayglover-ibm/kernelpp.git
+[submodule "third_party/pybind11"]
+	path = third_party/pybind11
+	url = https://github.com/pybind/pybind11.git
