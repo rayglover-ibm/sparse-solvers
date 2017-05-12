@@ -1,9 +1,9 @@
 include (DownloadProject)
 
 define_property(TARGET
-	PROPERTY
-	REQUIRED_RUNTIME_FILES
-	BRIEF_DOCS "Runtime taget files required for this target"
+    PROPERTY
+    REQUIRED_RUNTIME_FILES
+    BRIEF_DOCS "Runtime taget files required for this target"
     FULL_DOCS "Runtime taget files required for this target"
 )
 
@@ -41,7 +41,7 @@ macro (blas_init target pkg vendor)
         # OpenBLAS dll needs to be copied to binary directory
         append_target_files (${target} OpenBLAS)
         
-		target_link_libraries (${target} OpenBLAS)
+        target_link_libraries (${target} OpenBLAS)
         target_include_directories (${target} PUBLIC
             $<TARGET_PROPERTY:OpenBLAS,INTERFACE_INCLUDE_DIRECTORIES>
         )
