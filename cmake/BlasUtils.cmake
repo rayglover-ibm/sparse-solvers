@@ -25,9 +25,13 @@ endfunction ()
 
 macro (blas_init target pkg vendor)
     if (WIN32)
-        download_project(
-            PROJ   OpenBLAS
-            URL    https://ibm.box.com/shared/static/7gjddh51b9cmw0ydkdx7pv5glurjkpfz.zip
+        set (downloads_root "https://github.com/rayglover-ibm/openblas-ci/releases/download")
+        set (version "v0.2.19")
+        set (platform "win")
+
+        download_project (
+            PROJ  OpenBLAS
+            URL   ${downloads_root}/${version}/${platform}.zip
             UPDATE_DISCONNECTED 1
         )
         find_package (OpenBLAS REQUIRED
