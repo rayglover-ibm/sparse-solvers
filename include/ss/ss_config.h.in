@@ -6,6 +6,11 @@
 #pragma once
 
 #define LIB_NAME "${ss}"
+
+#define ss_VERSION_MAJOR ${core_VERSION_MAJOR}
+#define ss_VERSION_MINOR ${core_VERSION_MINOR}
+#define ss_VERSION_PATCH ${core_VERSION_PATCH}
+
 #define BLAS_VENDOR "${blas_vendor}"
 
 #cmakedefine BLAS_OpenBLAS

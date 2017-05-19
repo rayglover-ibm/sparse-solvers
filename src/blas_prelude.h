@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.  */
 
 #pragma once
-#include "lib_config.h"
+#include "ss/ss_config.h"
 
 #if defined(BLAS_OpenBLAS)
 # include <openblas_config.h>
