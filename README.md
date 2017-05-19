@@ -16,7 +16,7 @@ First, clone the repository and its submodules:
 
 At a minimum, you will need:
 
-- CMake 3.1
+- CMake 3.3
 - A reasonably compliant C++14 compiler, e.g.:
 
     | Windows    | Linux  | Mac     |
@@ -39,10 +39,10 @@ Build using CMake in the typical way:
 
 There are a number of CMake options available:
 
-    | CMake option             | Description            | Default |
-    |--------------------------|:-----------------------|:--------|
-    | `ss_WITH_TESTS`          | Enable unit tests      | ON      |
-    | `ss_WITH_PYTHON`         | Enable python binding  | OFF     |
+| CMake option             | Description            | Default |
+|--------------------------|:-----------------------|:--------|
+| `ss_WITH_TESTS`          | Enable unit tests      | ON      |
+| `ss_WITH_PYTHON`         | Enable python binding  | OFF     |
 
 ### Test
 
@@ -51,6 +51,7 @@ All tests can be run via CMake:
 ```bash
 >  ctest -C Release -VV
 ```
+<br>
 
 ---
 
