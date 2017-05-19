@@ -24,32 +24,27 @@ function (copy_target_files dest_target target)
 endfunction ()
 
 macro (blas_init target pkg vendor)
-    if (WIN32)
-        set (downloads_root "https://github.com/rayglover-ibm/openblas-ci/releases/download")
-        set (version "v0.2.19")
-        set (platform "win")
+    set (downloads_root "https://github.com/rayglover-ibm/openblas-ci/releases/download")
+    set (version "v0.2.19")
 
-        download_project (
-            PROJ  OpenBLAS
-            URL   ${downloads_root}/${version}/${platform}.zip
-            UPDATE_DISCONNECTED 1
-        )
-        find_package (OpenBLAS REQUIRED
-            PATHS "${OpenBLAS_SOURCE_DIR}"
-        )
-        
-        # OpenBLAS dll needs to be copied to binary directory
-        append_target_files (${target} OpenBLAS)
-        
-        target_link_libraries (${target} OpenBLAS)
-        target_include_directories (${target} PUBLIC
-            $<TARGET_PROPERTY:OpenBLAS,INTERFACE_INCLUDE_DIRECTORIES>
-        )
+    download_project (
+        PROJ OpenBLAS
+        URL "${downloads_root}/${version}/${CMAKE_SYSTEM_NAME}.zip"
+        UPDATE_DISCONNECTED 1
+    )
+    find_package (OpenBLAS REQUIRED
+        PATHS "${OpenBLAS_SOURCE_DIR}"
+    )
+    
+    # OpenBLAS library needs to be copied to binary directory
+    append_target_files (${target} OpenBLAS)
+    
+    target_link_libraries (${target} OpenBLAS)
+    target_include_directories (${target} PUBLIC
+        $<TARGET_PROPERTY:OpenBLAS,INTERFACE_INCLUDE_DIRECTORIES>
+    )
 
-        set (BLAS_OpenBLAS 1)
-        set (${pkg} "OpenBLAS")
-        set (${vendor} "OpenBLAS")
-    else ()
-        message (SEND_ERROR "TODO(rayg) non-windows blas")
-    endif ()
+    set (BLAS_OpenBLAS 1)
+    set (${pkg} "OpenBLAS")
+    set (${vendor} "OpenBLAS")
 endmacro ()
