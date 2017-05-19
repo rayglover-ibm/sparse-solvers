@@ -1,11 +1,62 @@
 # Sparse Solvers
 _High performance L1 minimization solvers for Python and Tensorflow. (Work in progress.)_
 
-## License
+## Releases
+
+_(TODO)_
+
+## Setup, Build & test
+
+First, clone the repository and its submodules:
+
+    > git clone --recurse-submodules https://github.com/rayglover-ibm/sparse-solvers
+    > cd sparse-solvers
+
+### Requirements
+
+At a minimum, you will need:
+
+- CMake 3.1
+- A reasonably compliant C++14 compiler, e.g.:
+
+    | Windows    | Linux  | Mac     |
+    |:----------:|:----------------------|:--------|    
+    | VS 2015    | gcc 5.3 / clang 3.6   | XCode 7.3 |
+
+### Python Package (optional)
+
+To build the python package you will need Python 2.7/3, along with the relevant Python development package, such as `python-dev` for Debian/Ubuntu. For Windows/Mac I recommend [Conda](https://conda.io/miniconda.html).
+
+### Build
+
+Build using CMake in the typical way:
+
+```bash
+> mkdir build && cd build
+> cmake [-G <Generator>] [<Options>] ..
+> cmake --build . --config Release
+```
+
+There are a number of CMake options available:
+
+    | CMake option             | Description            | Default |
+    |--------------------------|:-----------------------|:--------|
+    | `ss_WITH_TESTS`          | Enable unit tests      | ON      |
+    | `ss_WITH_PYTHON`         | Enable python binding  | OFF     |
+
+### Test
+
+All tests can be run via CMake:
+
+```bash
+>  ctest -C Release -VV
+```
+
+---
+
+__Copyright 2017 International Business Machines Corporation__
 
 ```
-Copyright 2017 International Business Machines Corporation
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
