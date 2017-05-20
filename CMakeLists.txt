@@ -43,6 +43,24 @@ target_include_directories (${ss}
 )
 target_link_libraries (${ss} kernelpp)
 
+# -- compiler specifics
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_compile_options (${ss} PUBLIC
+        -Wall -Wno-sign-compare
+        -pedantic
+        -fdiagnostics-color
+        -fno-omit-frame-pointer
+        -fmax-errors=5
+    )
+
+    if (CMAKE_BUILD_TYPE STREQUAL "Release")
+        set_target_properties (${ss}
+            # strip binary
+            PROPERTIES LINK_FLAGS "-Wl,--strip-all,--gc-sections"
+        )
+    endif ()
+endif ()
+
 # -- bindings
 if (${ss}_WITH_PYTHON)
     add_subdirectory (third_party/pybind11)

@@ -19,8 +19,8 @@ At a minimum, you will need:
 - CMake 3.3
 - A reasonably compliant C++14 compiler, e.g.:
 
-    | Windows    | Linux  | Mac     |
-    |:----------:|:----------------------|:--------|    
+    | Windows    | Linux                 | Mac       |
+    |:----------:|:----------------------|:----------|
     | VS 2015    | gcc 5.3 / clang 3.6   | XCode 7.3 |
 
 ### Python Package (optional)
@@ -39,10 +39,10 @@ Build using CMake in the typical way:
 
 There are a number of CMake options available:
 
-| CMake option             | Description            | Default |
-|--------------------------|:-----------------------|:--------|
-| `ss_WITH_TESTS`          | Enable unit tests      | ON      |
-| `ss_WITH_PYTHON`         | Enable python binding  | OFF     |
+| CMake option               | Description            | Default |
+|----------------------------|:-----------------------|:--------|
+| `sparsesolvers_WITH_TESTS` | Enable unit tests      | ON      |
+| `sparsesolvers_WITH_PYTHON`| Enable python binding  | OFF     |
 
 ### Test
 

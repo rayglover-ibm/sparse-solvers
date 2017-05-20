@@ -793,7 +793,7 @@ namespace ss
             && x != nullptr
             && y != nullptr);
 
-        frutils::blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, A,
+        blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, A,
             n, x, 1, 0.0, y, 1);
     }
     

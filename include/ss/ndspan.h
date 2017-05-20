@@ -18,6 +18,7 @@ limitations under the License.  */
 
 #include <array>
 #include <numeric>
+#include <cstddef>
 
 namespace ss
 {

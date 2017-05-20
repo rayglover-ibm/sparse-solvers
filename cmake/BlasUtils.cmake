@@ -29,7 +29,7 @@ macro (blas_init target pkg vendor)
 
     download_project (
         PROJ OpenBLAS
-        URL "${downloads_root}/${version}/${CMAKE_SYSTEM_NAME}.zip"
+        URL "${downloads_root}/${version}/${CMAKE_SYSTEM_NAME}.tar.gz"
         UPDATE_DISCONNECTED 1
     )
     find_package (OpenBLAS REQUIRED
