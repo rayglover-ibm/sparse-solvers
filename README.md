@@ -37,12 +37,18 @@ Build using CMake in the typical way:
 > cmake --build . --config Release
 ```
 
-There are a number of CMake options available:
+There are a number of _sparse-solvers_ specific CMake options:
 
 | CMake option               | Description            | Default |
 |----------------------------|:-----------------------|:--------|
 | `sparsesolvers_WITH_TESTS` | Enable unit tests      | ON      |
 | `sparsesolvers_WITH_PYTHON`| Enable python binding  | OFF     |
+
+Lastly, you might find some of these CMake options useful; I've included them here as a reference:
+
+| CMake option               | Description            | Default |
+|----------------------------|:-----------------------|:--------|
+| `PYTHON_EXECUTABLE:FILEPATH=<path-to-python-executable>` | Override the python location | <small>System specific</small> |
 
 ### Test
 
