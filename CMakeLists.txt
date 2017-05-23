@@ -61,14 +61,24 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     endif ()
 endif ()
 
+# -- main tests
+if (${ss}_WITH_TESTS)
+    enable_testing ()
+    add_executable ("${ss}_test"
+        "src/lib_test.cpp"
+        "src/solvers/homotopy_test.cpp"
+    )
+    target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
+    copy_target_files (${ss}_test ${ss})
+
+    add_test (
+        NAME ${ss}_test_suite
+        COMMAND ${ss}_test
+    )
+endif ()
+
 # -- bindings
 if (${ss}_WITH_PYTHON)
     add_subdirectory (third_party/pybind11)
     add_subdirectory (bindings/python)
-endif ()
-
-# -- tests
-if (${ss}_WITH_TESTS)
-    enable_testing ()
-    add_subdirectory (test)
 endif ()

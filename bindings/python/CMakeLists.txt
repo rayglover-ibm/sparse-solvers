@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.1)
 
-# capture the name of the core c++ library
+# -- python binding name
 set (binding "py")
 
 project ("${ss}-${binding}" VERSION "${PROJECT_VERSION}")
@@ -10,19 +10,22 @@ set (src_test "${ss}/binding_test.py")
 
 pybind11_add_module (${binding} ${src})
 configure_file ("${ss}/__init__.py" "${ss}/__init__.py" COPYONLY)
+copy_target_files (${binding} ${ss})
 
-# override the output name
+# -- override the output name and output location
 set_target_properties (${binding} PROPERTIES 
     OUTPUT_NAME "binding"
+    LIBRARY_OUTPUT_DIRECTORY "${ss}"
 )
+foreach (config ${CMAKE_CONFIGURATION_TYPES})
+    string (TOUPPER ${config} config)
+    set_target_properties (${binding} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${config} "${ss}")
+endforeach()
 target_link_libraries (${binding}
     PRIVATE ${ss}
 )
-add_custom_command (TARGET ${binding} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${binding}>" "${ss}"
-)
 
-# tests
+# -- binding tests
 if (${ss}_WITH_TESTS)
     include (CTest)
     add_test (
