@@ -57,13 +57,14 @@ namespace ss
         homotopy();
         ~homotopy();
 
-        kernelpp::maybe<ss::homotopy_report> solve(
+        kernelpp::maybe<homotopy_report> solve(
             const ndspan<float, 2> A,
-            const gsl::span<float> y,
+            const ndspan<float>    y,
                   float            tolerance,
                   std::uint32_t    max_iterations,
-                  gsl::span<float> x);
+                  ndspan<float>    x);
         
+      private:
         struct state;
         std::unique_ptr<state> m;
     };
