@@ -1,0 +1,41 @@
+import sys
+
+from setuptools import setup
+from distutils.dist import Distribution
+
+class CMakeDistribution(Distribution):
+    def has_ext_modules(self):
+        # override, because ext modules are built by cmake,
+        # not setuputils
+        return True
+
+setup(
+    name = '${ss}',
+    packages = ['${ss}'],
+
+    include_package_data = True,
+    package_data = {
+        # If any package contains *.<ext> , include them:
+        '': ['*.pyd', '*.dll'] if 'win' in sys.platform else ['*.so', '*.dynlib']
+    },
+
+    version     = '${PROJECT_VERSION}',
+    author      = 'IBM',
+    description = 'desc',
+    license     = 'Apache 2.0',
+    keywords    = '',
+    url         = '',
+
+    options = {
+        'bdist_wheel': {
+            'universal': False
+        },
+    },
+
+    distclass=CMakeDistribution,
+
+    zip_safe = False,
+
+    test_suite='nose.collector',
+    tests_require=['nose'],
+    )

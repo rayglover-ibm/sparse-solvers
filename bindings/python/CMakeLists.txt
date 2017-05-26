@@ -5,11 +5,10 @@ set (binding "py")
 
 project ("${ss}-${binding}" VERSION "${PROJECT_VERSION}")
 
-set (src      "${ss}/binding.cpp")
-set (src_test "${ss}/binding_test.py")
+set (src "${ss}/binding.cpp")
+# set (src_test "${ss}/binding_test.py")
 
 pybind11_add_module (${binding} ${src})
-configure_file ("${ss}/__init__.py" "${ss}/__init__.py" COPYONLY)
 copy_target_files (${binding} ${ss})
 
 # -- override the output name and output location
@@ -25,15 +24,25 @@ target_link_libraries (${binding}
     PRIVATE ${ss}
 )
 
+# -- setup.py
+configure_file (setup.py.in setup.py)
+
+# -- copy .py
+configure_file (${ss}/__init__.py     ${ss} COPYONLY)
+configure_file (tests/test_binding.py tests COPYONLY)
+
+# -- .whl creation
+add_custom_target (bdist_wheel
+    COMMAND ${PYTHON_EXECUTABLE} setup.py bdist_wheel
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 # -- binding tests
 if (${ss}_WITH_TESTS)
     include (CTest)
     add_test (
         NAME ${PROJECT_NAME}_test_suite
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMAND python "-u" "${src_test}"
-    )
-    set_tests_properties (${PROJECT_NAME}_test_suite
-        PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
+        COMMAND ${PYTHON_EXECUTABLE} setup.py test
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     )
 endif ()
