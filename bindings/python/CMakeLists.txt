@@ -6,7 +6,6 @@ set (binding "py")
 project ("${ss}-${binding}" VERSION "${PROJECT_VERSION}")
 
 set (src "${ss}/binding.cpp")
-# set (src_test "${ss}/binding_test.py")
 
 pybind11_add_module (${binding} ${src})
 copy_target_files (${binding} ${ss})
@@ -19,7 +18,7 @@ set_target_properties (${binding} PROPERTIES
 foreach (config ${CMAKE_CONFIGURATION_TYPES})
     string (TOUPPER ${config} config)
     set_target_properties (${binding} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${config} "${ss}")
-endforeach()
+endforeach ()
 target_link_libraries (${binding}
     PRIVATE ${ss}
 )
@@ -27,14 +26,15 @@ target_link_libraries (${binding}
 # -- setup.py
 configure_file (setup.py.in setup.py)
 
-# -- copy .py
-configure_file (${ss}/__init__.py     ${ss} COPYONLY)
-configure_file (tests/test_binding.py tests COPYONLY)
+# -- copy other files
+configure_file ("${ss}/__init__.py"     "${ss}/__init__.py" COPYONLY)
+configure_file ("tests/test_binding.py" "tests/test_bindings.py" COPYONLY)
 
 # -- .whl creation
 add_custom_target (bdist_wheel
     COMMAND ${PYTHON_EXECUTABLE} setup.py bdist_wheel
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${binding}
 )
 
 # -- binding tests
