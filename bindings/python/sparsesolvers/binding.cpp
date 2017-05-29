@@ -25,7 +25,9 @@ namespace util
     template <typename T>
     struct as_span<T, 1> {
         static ss::ndspan<T, 1> convert(const py::buffer_info& info) {
-            return ss::ndspan<T, 1>{ reinterpret_cast<T*>(info.ptr), { info.size }};
+            return ss::ndspan<T, 1>{
+                { reinterpret_cast<T*>(info.ptr), info.size }, { info.size }
+            };
         }
     };
 
@@ -34,7 +36,9 @@ namespace util
         static ss::ndspan<T, 2> convert(const py::buffer_info& info)
         {
             if (info.ndim != 2) throw std::runtime_error("Unexpected number of dimensions. Expected 2 but got " + info.ndim);
-            return ss::ndspan<T, 2>{ reinterpret_cast<T*>(info.ptr), { info.shape[0], info.shape[1] }};
+            return ss::ndspan<T, 2>{
+                { reinterpret_cast<T*>(info.ptr), info.size }, { info.shape[0], info.shape[1] }
+            };
         }
     };
 

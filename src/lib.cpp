@@ -35,10 +35,10 @@ namespace ss
               ndspan<float>    x)
     {
         return kernelpp::run<solve_homotopy>(
-            A.data(), A.shape[0], A.shape[1],
+            A.raw_data(), A.shape()[0], A.shape()[1],
             max_iterations,
             tolerance,
-            y.data(),
-            x.data());
+            y.raw_data(),
+            x.raw_data());
     }
 }

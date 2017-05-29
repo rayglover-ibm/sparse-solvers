@@ -31,7 +31,7 @@ TEST(homotopy, smoke_test)
         x.fill(0);
 
         ss::homotopy h;
-        auto result = h.solve({ identity_mat, { N, N } }, { signal }, 0.001, 10, { x });
+        auto result = h.solve(ss::as_span<2>(identity_mat, { N, N }), ss::as_span(signal), 0.001, 10, ss::as_span(x));
 
         /* resulting sparse respresentation should be exactly
            equal to the input signal */

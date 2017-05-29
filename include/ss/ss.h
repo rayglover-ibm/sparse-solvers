@@ -15,10 +15,7 @@ limitations under the License.  */
 #pragma once
 
 #include "ss/ndspan.h"
-
 #include <kernelpp/types.h>
-#include <gsl.h>
-#include <array>
 
 namespace ss
 {
@@ -28,7 +25,7 @@ namespace ss
     {
         /* the number of iterations performed. */
         std::uint32_t iter;
-        
+
         /* the solution error */
         double solution_error;
     };
@@ -46,7 +43,7 @@ namespace ss
          max_iter : maximum number of iterations
         tolerance : sparsity budget
                 y : signal vector of length m
-                
+
                 x : the output sparse representation vector
                     of length n
 
@@ -63,7 +60,7 @@ namespace ss
                   float            tolerance,
                   std::uint32_t    max_iterations,
                   ndspan<float>    x);
-        
+
       private:
         struct state;
         std::unique_ptr<state> m;

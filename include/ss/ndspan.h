@@ -15,54 +15,26 @@ limitations under the License.  */
 #pragma once
 
 #include <gsl/gsl>
-
+#include <xtensor/xtensor.hpp>
+#include <xtensor/xbuffer_adaptor.hpp>
 #include <array>
-#include <numeric>
-#include <cstddef>
 
 namespace ss
 {
-    namespace detail
-    {
-        template <size_t NDims>
-        size_t total_span(std::array<size_t, NDims> dims) {
-            return std::accumulate(dims.begin(), dims.end(), size_t{ 1u }, std::multiplies<size_t>());
-        }
+    template <typename T, size_t NDim = 1>
+    using ndspan = xt::xtensor_adaptor<
+        xt::xbuffer_adaptor<T>, NDim, xt::layout_type::row_major
+        >;
+
+    /* helpers ------------------------------------------------------------- */
+
+    template <size_t N, typename C, typename T = typename C::value_type>
+    ndspan<T, N> as_span(C& container, std::array<size_t, N> shape) {
+        return { { container.data(), container.size() }, shape };
     }
 
-    /*
-        N-dimensional span of `T`
-        TODO(rayg): replace with xtensor view
-     */
-    template <typename T, size_t NDims = 1>
-    struct ndspan
-    {
-        explicit ndspan()
-            : span{ nullptr, 0 }, shape()
-        {
-            static_assert(NDims == 0, "An empty ndspan must be dimensionless");
-        }
-
-        ndspan(gsl::span<T> s)
-            : span{ s }, shape{ s.size() }
-        {
-            static_assert(NDims == 1, "Shape must be specified");
-        }
-
-        ndspan(gsl::span<T> s, std::array<size_t, NDims> l)
-            : span{ s }, shape{ l }
-        {
-            Ensures(detail::total_span<NDims>(l) == span.size());
-        }
-
-        ndspan(T* data, std::array<size_t, NDims> l)
-            : span{ data, detail::total_span<NDims>(l) }, shape{ l }
-        {}
-
-		T* data() { return span.data(); }
-		const T* data() const { return span.data(); }
-
-        gsl::span<T> span;
-        const std::array<size_t, NDims> shape;
-    };
+    template <typename C, typename T = typename C::value_type>
+    ndspan<T, 1> as_span(C& container) {
+        return { { container.data(), container.size() }, { container.size() } };
+    }
 }
