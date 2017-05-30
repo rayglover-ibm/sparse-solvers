@@ -20,14 +20,20 @@ limitations under the License.  */
 
 namespace ss
 {
+    /*
+     *  A non-owning, row-major n-dimensional view over a contiguous
+     *  (ptr, size) representation.
+     */
     template <typename T, size_t NDim = 1>
     using ndspan = xt::xtensor_adaptor<
         xt::xbuffer_adaptor<T>, NDim, xt::layout_type::row_major
         >;
 
-    /* helpers ------------------------------------------------------------- */
+    /* utils --------------------------------------------------------------- */
 
-    /* stl container as 1-d non-owning view */
+    /*
+     *  constructs a 1-d non-owning view from an stl-like container
+     */
     template <typename C>
     inline auto as_span(C& container)
         -> std::enable_if_t<!xt::has_raw_data_interface<C>::value,
@@ -38,7 +44,9 @@ namespace ss
         return { buff, { container.size() } };
     }
 
-    /* stl container as n-d non-owning view */
+    /*
+     *  constructs a n-d non-owning view from an stl-like container
+     */
     template <size_t N, typename C, typename T = typename C::value_type>
     ndspan<T, N> as_span(C& container, std::array<size_t, N> shape)
     {
@@ -46,14 +54,18 @@ namespace ss
         return { buff, shape };
     }
 
-    /* tensor-like container as n non-owning view */
+    /*
+     *  constructs a n-d non-owning view from an tensor-like container
+     */
     template <class T>
     inline auto as_span(T& t)
         -> std::enable_if_t<xt::has_raw_data_interface<T>::value,
                 ndspan<typename T::value_type, std::tuple_size<typename T::shape_type>::value>
                 >
     {
-        xt::xbuffer_adaptor<typename T::value_type> buff{ t.raw_data() + t.raw_data_offset(), t.size() };
+        xt::xbuffer_adaptor<typename T::value_type> buff{
+                t.raw_data() + t.raw_data_offset(), t.size()
+            };
         return { buff, t.shape() };
     }
 }
