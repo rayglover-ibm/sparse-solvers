@@ -14,7 +14,6 @@ limitations under the License.  */
 
 #pragma once
 
-#include <gsl/gsl>
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xbuffer_adaptor.hpp>
 #include <array>
@@ -28,13 +27,33 @@ namespace ss
 
     /* helpers ------------------------------------------------------------- */
 
-    template <size_t N, typename C, typename T = typename C::value_type>
-    ndspan<T, N> as_span(C& container, std::array<size_t, N> shape) {
-        return { { container.data(), container.size() }, shape };
+    /* stl container as 1-d non-owning view */
+    template <typename C>
+    inline auto as_span(C& container)
+        -> std::enable_if_t<!xt::has_raw_data_interface<C>::value,
+                ndspan<typename C::value_type, 1>
+                >
+    {
+        xt::xbuffer_adaptor<typename C::value_type> buff{ container.data(), container.size() };
+        return { buff, { container.size() } };
     }
 
-    template <typename C, typename T = typename C::value_type>
-    ndspan<T, 1> as_span(C& container) {
-        return { { container.data(), container.size() }, { container.size() } };
+    /* stl container as n-d non-owning view */
+    template <size_t N, typename C, typename T = typename C::value_type>
+    ndspan<T, N> as_span(C& container, std::array<size_t, N> shape)
+    {
+        xt::xbuffer_adaptor<T> buff{ container.data(), container.size() };
+        return { buff, shape };
+    }
+
+    /* tensor-like container as n non-owning view */
+    template <class T>
+    inline auto as_span(T& t)
+        -> std::enable_if_t<xt::has_raw_data_interface<T>::value,
+                ndspan<typename T::value_type, std::tuple_size<typename T::shape_type>::value>
+                >
+    {
+        xt::xbuffer_adaptor<typename T::value_type> buff{ t.raw_data() + t.raw_data_offset(), t.size() };
+        return { buff, t.shape() };
     }
 }

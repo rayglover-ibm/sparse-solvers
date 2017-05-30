@@ -29,7 +29,7 @@ TEST(ndspan, 1d_constructors)
     EXPECT_EQ(data.size(), spanA.shape()[0]);
     EXPECT_EQ(data[1], spanA(1));
 
-    ss::ndspan<float> spanB({ &data[4], 1}, { 1 });
+    ss::ndspan<float> spanB{{ &data[4], 1}, { 1 }};
 
     EXPECT_EQ(1, spanB.shape()[0]);
     EXPECT_EQ(spanB(0), 5);

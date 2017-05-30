@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include <xtensor/xtensor.hpp>
 #include <array>
 #include <vector>
 
@@ -11,14 +12,9 @@ TEST(homotopy, smoke_test)
 {
     const uint32_t N = 5;
 
-    std::array<float, N * N> identity_mat;
+    xt::xtensor<float, 2> identity_mat = xt::eye(N);
     std::array<float, N> signal;
     std::array<float, N> x;
-
-    /* identity matrix */
-    identity_mat.fill(0);
-    for (uint32_t i = 0, j = 0; i < identity_mat.size(); i += N, j++)
-        identity_mat[i + j] = 1.0;
 
     /* for each column in the identity matrix */
     for (uint32_t n = 0; n < N; n++)
@@ -31,7 +27,7 @@ TEST(homotopy, smoke_test)
         x.fill(0);
 
         ss::homotopy h;
-        auto result = h.solve(ss::as_span<2>(identity_mat, { N, N }), ss::as_span(signal), 0.001, 10, ss::as_span(x));
+        auto result = h.solve(ss::as_span(identity_mat), ss::as_span(signal), 0.001, 10, ss::as_span(x));
 
         /* resulting sparse respresentation should be exactly
            equal to the input signal */
