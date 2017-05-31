@@ -14,8 +14,8 @@ limitations under the License.  */
 
 #pragma once
 
-#include <xtensor/xtensor.hpp>
 #include <xtensor/xbuffer_adaptor.hpp>
+#include <xtensor/xadapt.hpp>
 #include <array>
 
 namespace ss
@@ -29,10 +29,10 @@ namespace ss
         xt::xbuffer_adaptor<T>, NDim, xt::layout_type::row_major
         >;
 
-    /* utils --------------------------------------------------------------- */
+    /* as_span ------------------------------------------------------------- */
 
     /*
-     *  constructs a 1-d non-owning view from an stl-like container
+     *  constructs a 1-d non-owning view of an stl-like container
      */
     template <typename C>
     inline auto as_span(C& container)
@@ -40,22 +40,29 @@ namespace ss
                 ndspan<typename C::value_type, 1>
                 >
     {
-        xt::xbuffer_adaptor<typename C::value_type> buff{ container.data(), container.size() };
-        return { buff, { container.size() } };
+        auto* buf = container.data();
+        size_t len = container.size();
+
+        return xt::xadapt(buf, len, xt::no_ownership(), std::array<size_t, 1>{ len },
+            xt::layout_type::row_major);
     }
 
     /*
-     *  constructs a n-d non-owning view from an stl-like container
+     *  constructs a n-d non-owning view of the given shape
+     *  of an stl-like container
      */
-    template <size_t N, typename C, typename T = typename C::value_type>
-    ndspan<T, N> as_span(C& container, std::array<size_t, N> shape)
+    template <size_t N, typename C>
+    ndspan<typename C::value_type, N> as_span(C& container, std::array<size_t, N> shape)
     {
-        xt::xbuffer_adaptor<T> buff{ container.data(), container.size() };
-        return { buff, shape };
+        auto* buf = container.data();
+        size_t len = container.size();
+
+        return xt::xadapt(buf, len, xt::no_ownership(), shape,
+            xt::layout_type::row_major);
     }
 
     /*
-     *  constructs a n-d non-owning view from an tensor-like container
+     *  constructs a n-d non-owning view of a xtensor-like container
      */
     template <class T>
     inline auto as_span(T& t)
@@ -63,9 +70,10 @@ namespace ss
                 ndspan<typename T::value_type, std::tuple_size<typename T::shape_type>::value>
                 >
     {
-        xt::xbuffer_adaptor<typename T::value_type> buff{
-                t.raw_data() + t.raw_data_offset(), t.size()
-            };
-        return { buff, t.shape() };
+        auto* buf = t.raw_data() + t.raw_data_offset();
+        size_t len = t.size();
+
+        return xt::xadapt(buf, len, xt::no_ownership(), t.shape(),
+            xt::layout_type::row_major);
     }
 }

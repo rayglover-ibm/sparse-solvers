@@ -1,6 +1,7 @@
-#define GSL_THROW_ON_CONTRACT_VIOLATION 1
+#include "ss/ndspan.h"
 
-#include "ss/ss.h"
+#include <xtensor/xbuilder.hpp>
+#include <xtensor/xeval.hpp>
 
 #include <gtest/gtest.h>
 #include <array>
@@ -33,4 +34,17 @@ TEST(ndspan, 1d_constructors)
 
     EXPECT_EQ(1, spanB.shape()[0]);
     EXPECT_EQ(spanB(0), 5);
+}
+
+TEST(ndspan, xtensor_compatibility)
+{
+    xt::xarray<float> x{ 1, 2, 3, 4 };
+
+    auto d = xt::diag(x);
+    auto&& e = xt::eval(d);
+
+    ss::ndspan<float, 2> spanA = ss::as_span(e);
+
+    EXPECT_EQ(1, spanA(0, 0));
+    EXPECT_EQ(4, spanA(3, 3));
 }
