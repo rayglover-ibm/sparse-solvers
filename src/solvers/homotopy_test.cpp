@@ -81,36 +81,47 @@ TEST(homotopy, noisy_signal)
 TEST(homotopy, noisy_patterns)
 {
     const uint32_t M = 25, N = 100;
-    const float NOISE = 0.05f;
+    const int PATTERN = 3;
+    const float TOL = 0.1f;
 
     /* make some noise */
-    xtensor<float, 2> haystack = xt::random::randn({ M, N }, NOISE * 2 /* mean */, NOISE /* stddev */);
-    haystack = xt::clip(haystack, 0.0, 1.0);
+    xtensor<float, 2> haystack = xt::random::randn({ M, N }, .5f, .1f);
 
     /* construct a noisy signal with a pattern */
-    xtensor<float, 1> signal = xt::random::randn({ M }, NOISE * 2, NOISE);
-    xt::view(signal, xt::range(0, int(M), 2 /* step */)) += 1.0f;
+    xtensor<float, 1> signal = xt::random::randn({ M }, .5f, .1f);
+    xt::view(signal, xt::range(0, int(M), PATTERN /* step */)) += 1.0f;
 
     ss::homotopy solver;
 
+    int failures = 0;
     for (uint32_t n = 0; n < N; n++)
     {
         /* insert a representation of the signal to search for */
-        auto needle = xt::view(haystack, xt::range(0, int(M), 2 /* step */), n);
+        auto needle = xt::view(haystack, xt::range(0, int(M), PATTERN /* step */), n);
         needle += 1.0f;
 
         xtensor<float, 1> x = xt::zeros<float>({N});
-        auto result = solver.solve(as_span(haystack), as_span(signal), 0.01f, 100, as_span(x));
+        auto result = solver.solve(as_span(haystack), as_span(signal), TOL, 25, as_span(x));
 
         auto r = result.get<ss::homotopy_report>();
         EXPECT_GE(r.iter, 1);
-        EXPECT_LE(r.iter, 100);
-        EXPECT_LE(r.solution_error, NOISE);
+        EXPECT_LE(r.iter, 25);
+        EXPECT_LE(r.solution_error, TOL);
 
         /* argmax(x) == n */
         EXPECT_EQ(xt::amax(x)(), x[n]);
+        {
+            xtensor<float, 1> expect = xt::zeros<float>({N});
+            expect[n] = 1.0;
+
+            if (!xt::isclose(x, expect, 1.0 /* relative */, 0.1 /* absolute */)()) {
+                std::cout << "Solution for signal " << n << " failed a sparisty test:\n" << x << "\n\n";
+                failures++;
+            }
+        }
 
         /* remove the signal */
         needle -= 1.0f;
     }
+    EXPECT_EQ(failures, 0);
 }
