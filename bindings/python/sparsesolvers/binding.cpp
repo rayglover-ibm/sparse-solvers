@@ -9,6 +9,21 @@
 
 namespace py = pybind11;
 
+namespace ss
+{
+    template <size_t N, typename T>
+    inline ss::ndspan<T, N> as_span(const py::buffer_info& info)
+    {
+        if (info.ndim != N) throw std::runtime_error(
+            "Unexpected number of dimensions. Expected " + std::to_string(N) + " but got " + std::to_string(info.ndim));
+
+        std::array<size_t, N> shape;
+        for (size_t d = 0; d < N; d++) shape[d] = info.shape[d];
+
+        return ss::as_span<N, T>(reinterpret_cast<T*>(info.ptr), info.size, shape);
+    }
+}
+
 namespace util
 {
     std::valarray<int> get_version() {
@@ -16,31 +31,6 @@ namespace util
             ss_VERSION_MAJOR, ss_VERSION_MINOR, ss_VERSION_PATCH
         });
     }
-
-    template <typename T, size_t NDim>
-    struct as_span {
-        static ss::ndspan<T, NDim> convert(const py::buffer_info& info);
-    };
-
-    template <typename T>
-    struct as_span<T, 1> {
-        static ss::ndspan<T, 1> convert(const py::buffer_info& info) {
-            return ss::ndspan<T, 1>{
-                { reinterpret_cast<T*>(info.ptr), info.size }, { info.size }
-            };
-        }
-    };
-
-    template <typename T>
-    struct as_span<T, 2> {
-        static ss::ndspan<T, 2> convert(const py::buffer_info& info)
-        {
-            if (info.ndim != 2) throw std::runtime_error("Unexpected number of dimensions. Expected 2 but got " + info.ndim);
-            return ss::ndspan<T, 2>{
-                { reinterpret_cast<T*>(info.ptr), info.size }, { info.shape[0], info.shape[1] }
-            };
-        }
-    };
 
     template<typename R>
     bool try_throw(const kernelpp::maybe<R>& r)
@@ -82,16 +72,13 @@ PYBIND11_PLUGIN(binding)
                 auto bufA = A.request(),
                      bufb = b.request();
 
-                if (bufA.ndim != 2) throw std::runtime_error("A must be a matrix");
-                if (bufb.ndim != 1) throw std::runtime_error("b must be a vector");
-
                 auto x = py::array_t<float>(bufA.shape[1]);
                 auto result = solver.solve(
-                    util::as_span<float, 2>::convert(bufA),
-                    util::as_span<float, 1>::convert(bufb),
+                    ss::as_span<2, float>(bufA),
+                    ss::as_span<1, float>(bufb),
                     tolerance,
                     max_iterations,
-                    util::as_span<float, 1>::convert(x.request()));
+                    ss::as_span<1, float>(x.request()));
 
                 util::try_throw(result);
                 ss::homotopy_report hr = result.get<ss::homotopy_report>();

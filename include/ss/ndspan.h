@@ -62,6 +62,27 @@ namespace ss
     }
 
     /*
+     *  constructs a 1-d non-owning view of an (ptr, len) representation.
+     */
+    template <typename T>
+    ndspan<typename T, 1> as_span(T* buf, size_t len)
+    {
+        return xt::xadapt(buf, len, xt::no_ownership(), std::array<size_t, 1>{ len },
+            xt::layout_type::row_major);
+    }
+
+    /*
+     *  constructs a n-d non-owning view of the given shape
+     *  of an (ptr, len) representation.
+     */
+    template <size_t N, typename T>
+    ndspan<typename T, N> as_span(T* buf, size_t len, std::array<size_t, N> shape)
+    {
+        return xt::xadapt(buf, len, xt::no_ownership(), shape,
+            xt::layout_type::row_major);
+    }
+
+    /*
      *  constructs a n-d non-owning view of a xtensor-like container
      */
     template <class T>
