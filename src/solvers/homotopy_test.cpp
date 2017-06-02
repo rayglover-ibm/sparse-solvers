@@ -10,6 +10,24 @@
 using xt::xtensor;
 using ss::as_span;
 
+namespace
+{
+    void check_report(kernelpp::maybe<ss::homotopy_report>& result,
+        float tolerance, int max_iterations
+        )
+    {
+        EXPECT_TRUE(result.is<ss::homotopy_report>());
+        auto r = result.get<ss::homotopy_report>();
+
+        EXPECT_GE(r.iter, 1);
+        EXPECT_LE(r.iter, max_iterations);
+
+        if (r.iter < max_iterations) {
+            EXPECT_LE(r.solution_error, tolerance);
+        }
+    }
+}
+
 TEST(homotopy, smoke_test)
 {
     const uint32_t N = 5;
@@ -31,11 +49,12 @@ TEST(homotopy, smoke_test)
         view(x) = 0.0f;
 
         auto result = solver.solve(
-            as_span(identity), as_span(signal), 0.001f, 10, as_span(x));
+            as_span(identity), as_span(signal), .001f, N, as_span(x));
+
+        ::check_report(result, .001f, N);
 
         /* resulting sparse respresentation should be exactly
            equal to the input signal */
-        EXPECT_TRUE(result.is<ss::homotopy_report>());
         EXPECT_EQ(x, signal);
     }
 }
@@ -62,12 +81,9 @@ TEST(homotopy, noisy_signal)
         view(x) = 0.0f;
 
         auto result = solver.solve(
-            as_span(identity), as_span(signal), NOISE, 100, as_span(x));
+            as_span(identity), as_span(signal), NOISE, N, as_span(x));
 
-        auto r = result.get<ss::homotopy_report>();
-        EXPECT_GE(r.iter, 1);
-        EXPECT_LE(r.iter, 100);
-        EXPECT_LE(r.solution_error, NOISE);
+        ::check_report(result, NOISE, N);
 
         /* The solution should be sparse.
            Furthermore, since the noise level in the input signal
@@ -100,18 +116,15 @@ TEST(homotopy, noisy_patterns)
         auto needle = xt::view(haystack, xt::range(0, int(M), PATTERN /* step */), n);
         needle += 1.0f;
 
-        xtensor<float, 1> x = xt::zeros<float>({N});
+        xtensor<float, 1> x = xt::zeros<float>({ N });
         auto result = solver.solve(as_span(haystack), as_span(signal), TOL, 25, as_span(x));
 
-        auto r = result.get<ss::homotopy_report>();
-        EXPECT_GE(r.iter, 1);
-        EXPECT_LE(r.iter, 25);
-        EXPECT_LE(r.solution_error, TOL);
+        ::check_report(result, TOL, 25);
 
         /* argmax(x) == n */
         EXPECT_EQ(xt::amax(x)(), x[n]);
         {
-            xtensor<float, 1> expect = xt::zeros<float>({N});
+            xtensor<float, 1> expect = xt::zeros<float>({ N });
             expect[n] = 1.0;
 
             if (!xt::isclose(x, expect, 1.0 /* relative */, 0.1 /* absolute */)()) {
