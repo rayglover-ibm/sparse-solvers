@@ -15,6 +15,8 @@ limitations under the License.  */
 #include "homotopy.h"
 #include "blas_wrapper.h"
 
+#include <xtensor/xview.hpp>
+
 #include <cstdint>
 #include <algorithm>
 #include <limits>
@@ -31,62 +33,14 @@ namespace ss
     */
     using std::make_unique;
 
-#pragma region structs
-    /* A view on to a two-dimensional, contiguous,
-       row-major matrix of M rows, N cols */
-    template<typename TBuff>
-    class mat_view
-    {
-      public:
-        inline TBuff* row(const size_t i) const { return &_buff[N * i]; }
-        inline TBuff* col(const size_t j) const { return &_buff[j]; }
-        inline TBuff* data()              const { return _buff; }
+    template <typename T>
+    using mat_view = ss::ndspan<T, 2>;
 
-        inline TBuff& operator()(size_t row, size_t col) const {
-            return _buff[N * row + col];
-        }
+    template <typename T>
+    using mat = xt::xtensor<T, 2>;
 
-        mat_view() = delete;
-        mat_view(const uint32_t M, const uint32_t N, TBuff* buff)
-            : M{ M }, N{ N }, size{ M * N }, _buff{ buff }
-        {}
-
-        const uint32_t M;
-        const uint32_t N;
-        const uint32_t size;
-
-      protected:
-        TBuff *const  _buff;
-    };
-
-    template<typename TBuff>
-    class mat : public mat_view<TBuff>
-    {
-      public:
-        mat(const uint32_t M,
-            const uint32_t N,
-            std::unique_ptr<TBuff[]> ptr)
-            : mat_view<TBuff>(M, N, ptr.get())
-            , _ptr (std::move(ptr))
-        {}
-
-        mat(const uint32_t M,
-            const uint32_t N)
-            : mat(M, N, {make_unique<TBuff[]>(M*N)})
-        {}
-
-        explicit mat(mat<TBuff>&& other)
-            : mat(other.M, other.N, std::move(other._ptr))
-        {}
-
-      protected:
-        std::unique_ptr<TBuff[]> _ptr;
-    };
-
-    template<typename T>
-    using const_mat_view = mat_view<const T>;
-
-#pragma endregion
+    template <size_t D, typename M>
+    size_t dim(const M& mat) { return mat.shape()[D]; }
 
 #pragma region helpers
     template<typename T>
@@ -95,10 +49,10 @@ namespace ss
         T* x
         )
     {
-        std::fill_n(x, A.N, (T)0.0);
+        std::fill_n(x, dim<1>(A), (T)0.0);
 
-        for (size_t r{ 0 }; r < A.M; ++r) {
-            for (size_t c{ 0 }; c < A.N; ++c) {
+        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
+            for (size_t c{ 0 }; c < dim<1>(A); ++c) {
                 x[c] += A(r, c);
             }
         }
@@ -107,7 +61,7 @@ namespace ss
     template<typename T>
     T inf_norm(
         const T* v,
-        const uint32_t n,
+        const size_t n,
         size_t* idx
         )
     {
@@ -118,7 +72,7 @@ namespace ss
     template<typename T>
     T inf_norm(
         const T* v,
-        const uint32_t n
+        const size_t n
         )
     {
         size_t idx;
@@ -127,26 +81,26 @@ namespace ss
 
     template<typename T>
     size_t mat_subset_cols(
-        const mat_view<T>& A,
+        const mat<T>& A,
         const std::vector<bool>& col_indices,
-        mat_view<T>& A_subset
+        mat<T>& A_subset
         )
     {
-        const uint32_t m { A_subset.M };
+        const size_t M = dim<0>(A_subset);
+        const size_t N = dim<1>(A_subset);
 
         size_t i{ 0 }, n{ 0 };
         for (const bool val : col_indices) {
             if (val) {
                 /* copy col */
                 blas::xcopy(
-                    m /* n-rows */,
-                    A.col(i) /* src column */, A.N,
-                    A_subset.col(n) /* dest column */,
-                    A_subset.N);
+                    M /* rows */,
+                    A.raw_data() + i        /* src col */,  dim<1>(A),
+                    A_subset.raw_data() + n /* dest col */, M);
 
                 ++n;
 
-                if (n == A_subset.N)
+                if (n == N)
                     break;
             }
             ++i;
@@ -156,19 +110,19 @@ namespace ss
 
     template<typename T>
     void shift_column(
-        const mat_view<T>& A,
+        mat_view<T>& A,
         const size_t col,
         const size_t dest_col
         )
     {
-        assert(A.N > col);
-        assert(A.N > dest_col);
+        assert(dim<1>(A) > col);
+        assert(dim<1>(A) > dest_col);
 
         if (col == dest_col) { return; }
         const int32_t col_inc { dest_col < col ? -1 : 1 };
 
         /* for each row */
-        for (size_t r{ 0 }; r < A.M; ++r) {
+        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
             /* take the value to move */
             T const val{ A(r, col) };
 
@@ -184,29 +138,28 @@ namespace ss
 
     template<typename T>
     void shift_row(
-        const mat_view<T>& A,
+        mat_view<T>& A,
         const size_t row,
         const size_t dest_row
         )
     {
-        assert(A.M > row);
-        assert(A.M > dest_row);
+        assert(dim<0>(A) > row);
+        assert(dim<0>(A) > dest_row);
 
         if (row == dest_row) { return; }
         const int32_t row_inc{ dest_row < row ? -1 : 1 };
 
         /* store the src row */
-        auto x = make_unique<T[]>(A.N);
-        std::copy_n(A.row(row), A.N, x.get());
+        xt::xtensor<T, 1> x = xt::view(A, row);
 
-        /* for each row, starting at the dest row */
-        for (size_t r{ row }; r != dest_row; r += row_inc) {
-            /* shift row downward */
-            std::copy_n(A.row(r + row_inc), A.N, A.row(r));
+        for (size_t r{ row }; r != dest_row; r += row_inc)
+        {
+            /* shift row upward/downward */
+            xt::view(A, int(r) + row_inc) = xt::view(A, r);
         }
 
         /* copy row to destination */
-        std::copy_n(x.get(), A.N, A.row(dest_row));
+        view(A, dest_row, xt::all()) = x;
     }
 
     template<typename T>
@@ -255,24 +208,24 @@ namespace ss
     class online_column_inverse
     {
     public:
-        online_column_inverse(const_mat_view<T>& A)
+        online_column_inverse(const mat_view<T>& A)
             : _A{ A }
-            , _indices(A.N, false)
+            , _indices(dim<1>(A), false)
             , _n{ 0 }
         {
             _inv.reserve(10 * 10);
-            _A_sub_t.reserve(10 * A.M);
+            _A_sub_t.reserve(10 * dim<0>(A));
         }
 
-        const_mat_view<T> insert(const uint32_t column_idx)
+        const mat_view<T> insert(const uint32_t column_idx)
         {
-            assert(column_idx < _A.N);
+            assert(column_idx < dim<1>(_A));
 
             if (_indices[column_idx]) {
                 return inverse();
             }
 
-            auto const M = _A.M;
+            size_t const M = dim<0>(_A);
             if (_n == 0) {
                 /* initialize */
 // Py           A_gamma = helper.subset_array(A, lambda_indices)
@@ -286,10 +239,7 @@ namespace ss
             }
             else {
                 /* compute the inverse as if adding a column to the end */
-                auto v_col = make_unique<T[]>(M);
-
-                /* copy col from A */
-                blas::xcopy(M, _A.col(column_idx), _A.N, v_col.get(), 1);
+                xt::xtensor<T, 1> v_col = xt::view(_A, xt::all(), column_idx);  //make_unique<T[]>(M);
 
 // Py           u1 = np.dot(matA.T, vCol)
                 auto u1 = make_unique<T[]>(_n);
@@ -298,8 +248,8 @@ namespace ss
                     /* current view of sub_A_t */
                     mat_view<T> At = subset_transposed();
 
-                    blas::xgemv(CblasRowMajor, CblasNoTrans, At.M, At.N, 1.0, At.data(), At.N,
-                        v_col.get(), 1, 0.0,
+                    blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0, At.raw_data(), dim<1>(At),
+                        v_col.raw_data(), 1, 0.0,
                         u1.get(), 1);
                 }
 
@@ -311,7 +261,7 @@ namespace ss
 // Py           d = 1.0 / float(np.dot(vCol.T, vCol) - np.dot(u1.T, u2))
                 T d {1.0};
                 {
-                    T a = blas::xdot(M, v_col.get(), 1, v_col.get(), 1);
+                    T a = blas::xdot(M, v_col.raw_data(), 1, v_col.raw_data(), 1);
                     T b = blas::xdot(_n, u1.get(), 1, u2.get(), 1);
 
                     d /= a - b;
@@ -324,21 +274,21 @@ namespace ss
                 blas::xscal(_n, d, u3.get(), 1);
 
 // Py           F11inv = current_inverse + (d * np.outer(u2, u2.T))
-                mat<T> F11inv(_n, _n);
-                std::copy_n(_inv.data(), _inv.size(), F11inv.data());
+                mat<T> F11inv({ _n, _n });
+                std::copy_n(_inv.data(), _inv.size(), F11inv.raw_data());
 
 // Py           A := alpha*x*y**T + A
                 blas::xger(CblasRowMajor, _n, _n, d,
                     u2.get(), 1,
                     u2.get(), 1,
-                    F11inv.data(), _n);
+                    F11inv.raw_data(), _n);
 
                 /* assign F11inv */
                 {
                     uint32_t new_n { _n + 1 };
                     _inv.assign(new_n * new_n, 0);
-                    mat_view<T> mut_inv { new_n, new_n, _inv.data() };
 
+                    auto mut_inv = as_span<2>(_inv.data(), { new_n, new_n });
                     {
                         /* assign F11inv to top left */
 // Py                   new_inverse[0:N, 0:N] = F11inv # [F11inv - u3 - u3' F22inv]
@@ -389,10 +339,10 @@ namespace ss
             return inverse();
         }
 
-        const_mat_view<T> remove(uint32_t column_idx)
+        const mat_view<T> remove(uint32_t column_idx)
         {
             assert(_n > 0);
-            assert(column_idx < _A.N);
+            assert(column_idx < dim<1>(_A));
 
             if (!_indices[column_idx]) {
                 return inverse();
@@ -408,7 +358,7 @@ namespace ss
 // Py           current_inverse = current_inverse[permute_order, :]
 // Py           current_inverse = current_inverse[:, permute_order]
                 {
-                    mat_view<T> mut_inv{ _n, _n, _inv.data() };
+                    mat_view<T> mut_inv = as_span<2>(_inv.data(), { _n, _n });
 
                     /* calculate column to remove */
                     size_t idx{ insertion_index(column_idx) };
@@ -416,18 +366,18 @@ namespace ss
                     {
                         mat_view<T> As_t{ subset_transposed() };
                         /* shift row to the bottom */
-                        shift_row(As_t, idx, As_t.M - 1);
+                        shift_row(As_t, idx, dim<0>(As_t) - 1);
                     }
 
                     /* shift to position */
-                    shift_column(mut_inv, idx, mut_inv.N - 1);
-                    shift_row(mut_inv, idx, mut_inv.N - 1);
+                    shift_column(mut_inv, idx, dim<1>(mut_inv) - 1);
+                    shift_row(mut_inv, idx, dim<1>(mut_inv) - 1);
                 }
 
                 uint32_t new_n{ _n - 1 };
-                mat<T> F11inv(new_n, new_n);
+                mat<T> F11inv({ new_n, new_n }, T(0));
                 {
-                    const_mat_view<T> inv{ _n, _n, _inv.data() };
+                    const mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
 
 // Py               #update the inverse by removing the last column
 // Py               d = current_inverse[N - 1, N - 1]
@@ -436,7 +386,7 @@ namespace ss
 // Py               u3 = -1.0 * current_inverse[0:N - 1, N - 1]
                     /* copy last column */
                     auto u3 = make_unique<T[]>(new_n);
-                    blas::xcopy(new_n, inv.col(new_n), new_n + 1, u3.get(), 1);
+                    blas::xcopy(new_n, inv.raw_data() + new_n, new_n + 1, u3.get(), 1);
                     blas::xscal(new_n, -1, u3.get(), 1);
 
 // py               u2 = (1.0 / d) * u3
@@ -445,26 +395,26 @@ namespace ss
                     blas::xscal(new_n, (T)1.0 / d, u2.get(), 1);
 
 // Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
-                    std::fill_n(F11inv.data(), F11inv.size, (T)0.0);
+//                    std::fill_n(F11inv.raw_data(), F11inv.size, (T)0.0);
 
 // Py               new_inverse = F11inv - (d* np.outer(u2, u2.T))
                     /* A := alpha*x*y**T + A,  */
                     blas::xger(CblasRowMajor, new_n, new_n, d,
                         u2.get(), 1,
                         u2.get(), 1,
-                        F11inv.data(), new_n);
+                        F11inv.raw_data(), new_n);
 
                     /* slightly awkward.. */
-                    for (size_t r{ 0 }; r < F11inv.M; ++r) {
-                        for (size_t c{ 0 }; c < F11inv.N; ++c) {
+                    for (size_t r{ 0 }; r < dim<0>(F11inv); ++r) {
+                        for (size_t c{ 0 }; c < dim<1>(F11inv); ++c) {
                             F11inv(r, c) = inv(r, c) - F11inv(r, c);
                         }
                     }
                 }
 
                 /* resize and assign */
-                _inv.assign(F11inv.size, 0);
-                std::copy_n(F11inv.data(), F11inv.size, _inv.data());
+                _inv.assign(F11inv.size(), 0);
+                std::copy_n(F11inv.raw_data(), F11inv.size(), _inv.data());
             }
 
             _indices[column_idx] = false;
@@ -473,7 +423,7 @@ namespace ss
             return inverse();
         }
 
-        const_mat_view<T> flip(const uint32_t index) {
+        const mat_view<T> flip(const uint32_t index) {
             assert(index < _indices.size());
             if (_indices[index])
                 return remove(index);
@@ -488,23 +438,23 @@ namespace ss
         const uint32_t N() { return _n; }
 
         /* returns a view of the inverse */
-        const_mat_view<T> inverse()
+        const mat_view<T> inverse()
         {
             assert(_inv.size() >= _n * _n);
-            return { _n, _n, _inv.data() };
+            return as_span<2>(_inv.data(), { _n, _n });
         }
 
     private:
 
         mat_view<T> subset_transposed()
         {
-            assert(_A_sub_t.size() >= _n * _A.M);
-            return { _n, _A.M, _A_sub_t.data() };
+            assert(_A_sub_t.size() >= _n * dim<0>(_A));
+            return as_span<2>(_A_sub_t.data(), { _n, dim<0>(_A) });
         }
 
         size_t insertion_index(uint32_t column_idx)
         {
-            assert(column_idx < _A.N);
+            assert(column_idx < dim<1>(_A));
 
             size_t idx{ 0u };
             for (uint32_t i{ 0u }; i < column_idx; ++i) {
@@ -517,19 +467,19 @@ namespace ss
 
         void insert_col_into_row(
             std::vector<T>& v,
-            const const_mat_view<T>& A,
+            const mat_view<T>& A,
             const size_t src_col,
             const size_t dest_row
             )
         {
-            auto n = A.M;
-            auto it = v.insert(v.begin() + (dest_row * n), n, 0.0);
+            auto m = dim<0>(A);
+            auto it = v.insert(v.begin() + (dest_row * m), m, 0.0);
 
-            blas::xcopy(n, A.col(src_col), A.N, &*it, 1);
+            blas::xcopy(m, A.raw_data() + src_col, dim<1>(A), &*it, 1);
         }
 
         /* original matrix */
-        const_mat_view<T>& _A;
+        const mat_view<T>& _A;
         /* A_gamma transposed */
         std::vector<T> _A_sub_t;
         /* the inverse of A_gamma */
@@ -544,7 +494,7 @@ namespace ss
 
     template<typename T>
     void residual_vector(
-        const const_mat_view<T>& A,
+        const mat_view<T>& A,
         const T* y,
         const T* x_previous,
         T* c
@@ -560,27 +510,27 @@ namespace ss
         */
 
 // Py   A_x = np.dot(A, x_previous)
-        auto A_x = make_unique<T[]>(A.M);
-        blas::xgemv(CblasRowMajor, CblasNoTrans, A.M, A.N, 1.0, A.data(),
-            A.N, x_previous, 1, 0.0, A_x.get(), 1);
+        auto A_x = make_unique<T[]>(dim<0>(A));
+        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+            dim<1>(A), x_previous, 1, 0.0, A_x.get(), 1);
 
 // Py   difference = np.zeros(len(y))
 // Py   for i in range(0, len(y)) :
 // Py       difference[i] = y[i] - A_x[i]
 
-        /* A_x becomes y - A_x */
-        for (size_t i = 0; i < A.M; i++) {
+        /* A_x = y - A_x */
+        for (size_t i = 0; i < dim<0>(A); i++) {
             A_x[i] = y[i] - A_x[i];
         }
 
 // Py   return np.dot(A_t, difference)
-        blas::xgemv(CblasRowMajor, CblasTrans, A.M, A.N, 1.0, A.data(),
-            A.N, A_x.get() /* difference */, 1, 0.0, c, 1);
+        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+            dim<1>(A), A_x.get() /* difference */, 1, 0.0, c, 1);
     }
 
     template<typename T>
     std::pair<T, uint32_t> find_max_gamma(
-        const const_mat_view<T>& A,
+        const mat_view<T>& A,
         const T* res_vec,
         const T* x,
         const T* dir_vec,
@@ -590,14 +540,14 @@ namespace ss
     {
         /* evaluate the eligible elements of transpose(A) * A * dir_vec */
         /* p = Ad */
-        auto p = make_unique<T[]>(A.M);
-        blas::xgemv(CblasRowMajor, CblasNoTrans, A.M, A.N, 1.0, A.data(),
-            A.N, dir_vec, 1, 0.0, p.get(), 1);
+        auto p = make_unique<T[]>(dim<0>(A));
+        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+            dim<1>(A), dir_vec, 1, 0.0, p.get(), 1);
 
         /* q = transpose(A)p */
-        auto q = make_unique<T[]>(A.N);
-        blas::xgemv(CblasRowMajor, CblasTrans, A.M, A.N, 1.0, A.data(),
-            A.N, p.get(), 1, 0.0, q.get(), 1);
+        auto q = make_unique<T[]>(dim<1>(A));
+        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+            dim<1>(A), p.get(), 1, 0.0, q.get(), 1);
 
         /* evaluate the competing lists of terms */
         T min{ std::numeric_limits<T>::max() };
@@ -642,7 +592,7 @@ namespace ss
 
     template<typename T>
     homotopy_report run_solver(
-        const_mat_view<T>& A,
+        const mat_view<T>& A,
         const std::uint32_t max_iter,
         const T tolerance,
         const T* y,
@@ -659,23 +609,23 @@ namespace ss
 
         /* initialise x to a vector of zeros */
 // Py   x = np.zeros(N)
-        std::fill_n(x, A.N, (T)0.0);
+        std::fill_n(x, dim<1>(A), (T)0.0);
 
         /* initialise residual vector */
 // Py   c_vec = residual_vector(A, y, x)
-        mat<T> c_vec(1, A.N);
-        residual_vector(A, y, x, c_vec.data());
+        mat<T> c_vec({ 1, dim<1>(A) });
+        residual_vector(A, y, x, c_vec.raw_data());
 
         /* initialise lambda = || c_vec || _inf */
         // Py   c_inf = (np.linalg.norm(c_vec, np.inf))
         T c_inf{ 0.0 };
 
-        auto direction_vec = make_unique<T[]>(A.N);
+        auto direction_vec = make_unique<T[]>(dim<1>(A));
         online_column_inverse<T> inv(A);
 
         {
             size_t c_inf_i;
-            c_inf = inf_norm(c_vec.data(), A.N, &c_inf_i);
+            c_inf = inf_norm(c_vec.raw_data(), dim<1>(A), &c_inf_i);
 
             T c_vec_gamma{ c_inf };
             T subsample_direction_vector{ 0.0 };
@@ -695,7 +645,7 @@ namespace ss
             iter++;
 
             {
-                auto const gamma = find_max_gamma(A, c_vec.data(), x,
+                auto const gamma = find_max_gamma(A, c_vec.raw_data(), x,
                     direction_vec.get(), c_inf, inv.indices());
 
                 /* update inverse by inserting/removing the
@@ -703,30 +653,30 @@ namespace ss
                 inv.flip(gamma.second);
 
                 /* update x */
-                for (size_t i{ 0 }; i < A.N; i++) {
+                for (size_t i{ 0 }; i < dim<1>(A); i++) {
                     x[i] += gamma.first * direction_vec[i];
                 }
             }
 
             /* update residual vector */
 // Py       c_vec = residual_vector(A, y, x)
-            residual_vector(A, y, x, c_vec.data());
+            residual_vector(A, y, x, c_vec.raw_data());
 
             /* update direction vector */
             {
 // Py           c_vec_gamma = helper.subset_array(c_vec, lambda_indices)
                 const uint32_t N{ inv.N() };
 
-                mat<T> c_vec_gamma(1, N);
+                mat<T> c_vec_gamma({1, N});
                 mat_subset_cols(c_vec, inv.indices(), c_vec_gamma);
 
 // Py           direction_vec = np.dot(invAtA, helper.sign_vector(c_vec_gamma))
-                sign_vector(N, c_vec_gamma.data(), c_vec_gamma.data(), tolerance);
+                sign_vector(N, c_vec_gamma.raw_data(), c_vec_gamma.raw_data(), tolerance);
                 auto dir_tmp = make_unique<T[]>(N);
 
                 blas::xgemv(CblasRowMajor, CblasNoTrans, N, N, 1.0,
-                    inv.inverse().data(), N,
-                    c_vec_gamma.data(), 1,
+                    inv.inverse().raw_data(), N,
+                    c_vec_gamma.raw_data(), 1,
                     0.0,
                     dir_tmp.get(), 1);
 
@@ -735,7 +685,7 @@ namespace ss
             }
 
             /* find lambda(i.e., infinite norm of residual vector) */
-            c_inf = inf_norm(c_vec.data(), A.N);
+            c_inf = inf_norm(c_vec.raw_data(), dim<1>(A));
 
             /* check if infinity norm of residual vector is within tolerance */
             if (c_inf < tolerance)
@@ -749,27 +699,27 @@ namespace ss
         mat_view<T>& A
         )
     {
-        if (A.N == 1 /* vector */) {
+        if (dim<1>(A) == 1 /* vector */) {
             T sum{ 0.0 };
             columnwise_sum(A, &sum);
 
             if (sum <= 0) { return false; }
 
-            for (size_t i{ 0 }; i < A.M; ++i) {
+            for (size_t i{ 0 }; i < dim<0>(A); ++i) {
                 A(i, 0) /= sum;
             }
         }
         else {
             /* matrix */
-            auto sums = make_unique<T[]>(A.N);
+            auto sums = make_unique<T[]>(dim<1>(A));
             columnwise_sum(A, sums.get());
 
-            for (size_t i{ 0 }; i < A.N; ++i) {
+            for (size_t i{ 0 }; i < dim<1>(A); ++i) {
                 if (sums[i] <= 0) { return false; }
             }
 
-            for (size_t r{ 0 }; r < A.M; ++r) {
-                for (size_t c{ 0 }; c < A.N; ++c) {
+            for (size_t r{ 0 }; r < dim<0>(A); ++r) {
+                for (size_t c{ 0 }; c < dim<1>(A); ++c) {
                     A(r, c) /= sums[c];
                 }
             }
@@ -851,7 +801,7 @@ namespace ss
             && A_n > 0
             && A_ != nullptr);
 
-        const_mat_view<float> A(A_m, A_n, A_);
+        const mat_view<float> A = ss::as_span<2, float>(const_cast<float*>(A_), { A_m, A_n });
         return run_solver(A, max_iter, tolerance, y, x);
     }
 }

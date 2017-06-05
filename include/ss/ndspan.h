@@ -76,8 +76,11 @@ namespace ss
      *  of an (ptr, len) representation.
      */
     template <size_t N, typename T>
-    ndspan<typename T, N> as_span(T* buf, size_t len, std::array<size_t, N> shape)
+    ndspan<typename T, N> as_span(T* buf, std::array<size_t, N> shape)
     {
+        size_t len = shape[0];
+        for (size_t j=1; j < N; j++) len *= shape[j];
+
         return xt::xadapt(buf, len, xt::no_ownership(), shape,
             xt::layout_type::row_major);
     }

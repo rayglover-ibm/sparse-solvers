@@ -20,7 +20,7 @@ namespace ss
         std::array<size_t, N> shape;
         for (size_t d = 0; d < N; d++) shape[d] = info.shape[d];
 
-        return ss::as_span<N, T>(reinterpret_cast<T*>(info.ptr), info.size, shape);
+        return ss::as_span<N, T>(reinterpret_cast<T*>(info.ptr), shape);
     }
 }
 
