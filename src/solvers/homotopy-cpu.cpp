@@ -155,7 +155,7 @@ namespace ss
         for (size_t r{ row }; r != dest_row; r += row_inc)
         {
             /* shift row upward/downward */
-            xt::view(A, int(r) + row_inc) = xt::view(A, r);
+            xt::view(A, r) = xt::view(A, int(r) + row_inc);
         }
 
         /* copy row to destination */
