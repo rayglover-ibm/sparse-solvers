@@ -95,8 +95,8 @@ namespace ss
                 /* copy col */
                 blas::xcopy(
                     M /* rows */,
-                    A.raw_data() + i        /* src col */,  dim<1>(A),
-                    A_subset.raw_data() + n /* dest col */, M);
+                    A.cbegin() + i       /* src col */,  dim<1>(A),
+                    A_subset.begin() + n /* dest col */, N);
 
                 ++n;
 
