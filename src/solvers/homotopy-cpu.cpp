@@ -260,7 +260,7 @@ namespace ss
 // Py           d = 1.0 / float(np.dot(vCol.T, vCol) - np.dot(u1.T, u2))
                 T d {1.0};
                 {
-                    T a = blas::xdot(M, v_col.raw_data(), 1, v_col.raw_data(), 1);
+                    T a = blas::xdot(M, v_col.cbegin(), 1, v_col.cbegin(), 1);
                     T b = blas::xdot(_n, u1.get(), 1, u2.get(), 1);
 
                     d /= a - b;
@@ -274,13 +274,13 @@ namespace ss
 
 // Py           F11inv = current_inverse + (d * np.outer(u2, u2.T))
                 mat<T> F11inv({ _n, _n });
-                std::copy_n(_inv.data(), _inv.size(), F11inv.raw_data());
+                std::copy_n(_inv.data(), _inv.size(), F11inv.begin());
 
 // Py           A := alpha*x*y**T + A
                 blas::xger(CblasRowMajor, _n, _n, d,
                     u2.get(), 1,
                     u2.get(), 1,
-                    F11inv.raw_data(), _n);
+                    F11inv.begin(), _n);
 
                 /* assign F11inv */
                 {
@@ -385,7 +385,7 @@ namespace ss
 // Py               u3 = -1.0 * current_inverse[0:N - 1, N - 1]
                     /* copy last column */
                     auto u3 = make_unique<T[]>(new_n);
-                    blas::xcopy(new_n, inv.raw_data() + new_n, new_n + 1, u3.get(), 1);
+                    blas::xcopy(new_n, inv.cbegin() + new_n, new_n + 1, u3.get(), 1);
                     blas::xscal(new_n, -1, u3.get(), 1);
 
 // py               u2 = (1.0 / d) * u3
@@ -394,14 +394,13 @@ namespace ss
                     blas::xscal(new_n, (T)1.0 / d, u2.get(), 1);
 
 // Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
-//                    std::fill_n(F11inv.raw_data(), F11inv.size, (T)0.0);
-
 // Py               new_inverse = F11inv - (d* np.outer(u2, u2.T))
+
                     /* A := alpha*x*y**T + A,  */
                     blas::xger(CblasRowMajor, new_n, new_n, d,
                         u2.get(), 1,
                         u2.get(), 1,
-                        F11inv.raw_data(), new_n);
+                        F11inv.begin(), new_n);
 
                     /* slightly awkward.. */
                     for (size_t r{ 0 }; r < dim<0>(F11inv); ++r) {
@@ -413,7 +412,7 @@ namespace ss
 
                 /* resize and assign */
                 _inv.assign(F11inv.size(), 0);
-                std::copy_n(F11inv.raw_data(), F11inv.size(), _inv.data());
+                std::copy_n(F11inv.cbegin(), F11inv.size(), _inv.data());
             }
 
             _indices[column_idx] = false;
@@ -474,7 +473,7 @@ namespace ss
             auto m = dim<0>(A);
             auto it = v.insert(v.begin() + (dest_row * m), m, 0.0);
 
-            blas::xcopy(m, A.raw_data() + src_col, dim<1>(A), &*it, 1);
+            blas::xcopy(m, A.cbegin() + src_col, dim<1>(A), &*it, 1);
         }
 
         /* original matrix */
@@ -510,7 +509,7 @@ namespace ss
 
 // Py   A_x = np.dot(A, x_previous)
         auto A_x = make_unique<T[]>(dim<0>(A));
-        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
             dim<1>(A), x_previous, 1, 0.0, A_x.get(), 1);
 
 // Py   difference = np.zeros(len(y))
@@ -523,7 +522,7 @@ namespace ss
         }
 
 // Py   return np.dot(A_t, difference)
-        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
             dim<1>(A), A_x.get() /* difference */, 1, 0.0, c, 1);
     }
 
@@ -540,12 +539,12 @@ namespace ss
         /* evaluate the eligible elements of transpose(A) * A * dir_vec */
         /* p = Ad */
         auto p = make_unique<T[]>(dim<0>(A));
-        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
             dim<1>(A), dir_vec, 1, 0.0, p.get(), 1);
 
         /* q = transpose(A)p */
         auto q = make_unique<T[]>(dim<1>(A));
-        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.raw_data(),
+        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
             dim<1>(A), p.get(), 1, 0.0, q.get(), 1);
 
         /* evaluate the competing lists of terms */
@@ -613,7 +612,7 @@ namespace ss
         /* initialise residual vector */
 // Py   c_vec = residual_vector(A, y, x)
         mat<T> c_vec({ 1, dim<1>(A) });
-        residual_vector(A, y, x, c_vec.raw_data());
+        residual_vector(A, y, x, c_vec.begin());
 
         /* initialise lambda = || c_vec || _inf */
         // Py   c_inf = (np.linalg.norm(c_vec, np.inf))
@@ -624,7 +623,7 @@ namespace ss
 
         {
             size_t c_inf_i;
-            c_inf = inf_norm(c_vec.raw_data(), dim<1>(A), &c_inf_i);
+            c_inf = inf_norm(c_vec.cbegin(), dim<1>(A), &c_inf_i);
 
             T c_vec_gamma{ c_inf };
             T subsample_direction_vector{ 0.0 };
@@ -644,7 +643,7 @@ namespace ss
             iter++;
 
             {
-                auto const gamma = find_max_gamma(A, c_vec.raw_data(), x,
+                auto const gamma = find_max_gamma(A, c_vec.cbegin(), x,
                     direction_vec.get(), c_inf, inv.indices());
 
                 /* update inverse by inserting/removing the
@@ -659,23 +658,23 @@ namespace ss
 
             /* update residual vector */
 // Py       c_vec = residual_vector(A, y, x)
-            residual_vector(A, y, x, c_vec.raw_data());
+            residual_vector(A, y, x, c_vec.begin());
 
             /* update direction vector */
             {
-// Py           c_vec_gamma = helper.subset_array(c_vec, lambda_indices)
                 const uint32_t N{ inv.N() };
 
+// Py           c_vec_gamma = helper.subset_array(c_vec, lambda_indices)
                 mat<T> c_vec_gamma({1, N});
                 mat_subset_cols(c_vec, inv.indices(), c_vec_gamma);
 
 // Py           direction_vec = np.dot(invAtA, helper.sign_vector(c_vec_gamma))
-                sign_vector(N, c_vec_gamma.raw_data(), c_vec_gamma.raw_data(), tolerance);
-                auto dir_tmp = make_unique<T[]>(N);
+                sign_vector(N, c_vec_gamma.cbegin(), c_vec_gamma.begin(), tolerance);
 
+                auto dir_tmp = make_unique<T[]>(N);
                 blas::xgemv(CblasRowMajor, CblasNoTrans, N, N, 1.0,
-                    inv.inverse().raw_data(), N,
-                    c_vec_gamma.raw_data(), 1,
+                    inv.inverse().cbegin(), N,
+                    c_vec_gamma.cbegin(), 1,
                     0.0,
                     dir_tmp.get(), 1);
 
@@ -684,7 +683,7 @@ namespace ss
             }
 
             /* find lambda(i.e., infinite norm of residual vector) */
-            c_inf = inf_norm(c_vec.raw_data(), dim<1>(A));
+            c_inf = inf_norm(c_vec.cbegin(), dim<1>(A));
 
             /* check if infinity norm of residual vector is within tolerance */
             if (c_inf < tolerance)
