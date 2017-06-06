@@ -11,8 +11,9 @@ set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 set (ss "sparsesolvers" CACHE STRING "native library name")
 
 # options ---------------------------------------------------------------------
-option ("${ss}_WITH_TESTS"  "Enable ${ss} unit tests" ON)
-option ("${ss}_WITH_PYTHON" "Enable ${ss} python binding" OFF)
+option ("${ss}_WITH_TESTS"   "Enable ${ss} unit tests" ON)
+option ("${ss}_WITH_BENCHES" "Enable ${ss} benchmarks" OFF)
+option ("${ss}_WITH_PYTHON"  "Enable ${ss} python binding" OFF)
 # -----------------------------------------------------------------------------
 
 list (APPEND CMAKE_MODULE_PATH
@@ -64,7 +65,6 @@ endif ()
 
 # -- main tests
 if (${ss}_WITH_TESTS)
-    enable_testing ()
     add_executable ("${ss}_test"
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"
@@ -72,9 +72,33 @@ if (${ss}_WITH_TESTS)
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
     copy_target_files (${ss}_test ${ss})
 
+    enable_testing ()
     add_test (
         NAME ${ss}_test_suite
         COMMAND ${ss}_test
+    )
+endif ()
+
+# -- benches
+if (${ss}_WITH_BENCHES)
+    # note: DownloadProject is a submodule of kernelpp
+    include ("${PROJECT_SOURCE_DIR}/third_party/kernelpp/third_party/DownloadProject/DownloadProject.cmake")
+
+    # download Google Benchmark targets
+    download_project (
+        PROJ            googlebench
+        GIT_REPOSITORY  https://github.com/google/benchmark.git
+        GIT_TAG         master
+        UPDATE_DISCONNECTED 1
+    )
+    add_subdirectory ("${googlebench_SOURCE_DIR}" "${googlebench_BINARY_DIR}")
+    add_executable ("${ss}_benches" "src/solvers/homotopy_bench.cpp")
+    target_link_libraries ("${ss}_benches" "${ss}" benchmark)
+
+    enable_testing ()
+    add_test (
+        NAME ${ss}_benches
+        COMMAND ${ss}_benches
     )
 endif ()
 
