@@ -124,7 +124,7 @@ namespace ss
         /* for each row */
         for (size_t r{ 0 }; r < dim<0>(A); ++r) {
             /* take the value to move */
-            T const val{ A(r, col) };
+            const T val{ A(r, col) };
 
             /* for each col, starting at the src col */
             for (size_t c{ col }; c != dest_col; c += col_inc) {
@@ -159,7 +159,7 @@ namespace ss
         }
 
         /* copy row to destination */
-        view(A, dest_row, xt::all()) = x;
+        view(A, dest_row) = x;
     }
 
     template<typename T>
@@ -239,7 +239,7 @@ namespace ss
             }
             else {
                 /* compute the inverse as if adding a column to the end */
-                xt::xtensor<T, 1> v_col = xt::view(_A, xt::all(), column_idx);  //make_unique<T[]>(M);
+                xt::xtensor<T, 1> v_col = xt::view(_A, xt::all(), column_idx);
 
 // Py           u1 = np.dot(matA.T, vCol)
                 auto u1 = make_unique<T[]>(_n);
@@ -247,9 +247,8 @@ namespace ss
                 {
                     /* current view of sub_A_t */
                     mat_view<T> At = subset_transposed();
-
-                    blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0, At.raw_data(), dim<1>(At),
-                        v_col.raw_data(), 1, 0.0,
+                    blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0, At.cbegin(),
+                        dim<1>(At), v_col.cbegin(), 1, 0.0,
                         u1.get(), 1);
                 }
 
