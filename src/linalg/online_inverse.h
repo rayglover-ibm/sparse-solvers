@@ -1,3 +1,16 @@
+/*  Copyright 2017 International Business Machines Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.  */
 #pragma once
 
 #include "blas_wrapper.h"
@@ -10,6 +23,12 @@
 
 namespace ss
 {
+    /*
+     *  Given a non-owning reference to a matrix `A`, maintains
+     *  the inverse of column-wise subset of `A`.
+     *
+     *  Refer to ./docs/algorithms/online-matrix-inverse for more information
+     */
     template <typename T>
     class online_column_inverse
     {
@@ -23,6 +42,10 @@ namespace ss
             _A_sub_t.reserve(10 * dim<0>(A));
         }
 
+        /*
+         *  Inserts a column of `A` in to the inverse. Returns a
+         *  view of the updated inverse.
+         */
         const mat_view<T> insert(const uint32_t column_idx)
         {
             assert(column_idx < dim<1>(_A));
@@ -144,6 +167,10 @@ namespace ss
             return inverse();
         }
 
+        /*
+         *  Removes a column of `A` from the inverse. Returns a
+         *  view of the updated inverse.
+         */
         const mat_view<T> remove(uint32_t column_idx)
         {
             assert(_n > 0);
@@ -227,6 +254,11 @@ namespace ss
             return inverse();
         }
 
+        /*
+         *  Inverts the membership of the column at the given
+         *  column index in the inverse. Returns a view of the
+         *  updated inverse.
+         */
         const mat_view<T> flip(const uint32_t index) {
             assert(index < _indices.size());
             if (_indices[index])
@@ -255,6 +287,10 @@ namespace ss
             return as_span<2>(_A_sub_t.data(), { _n, dim<0>(_A) });
         }
 
+        /*
+            Returns the index of the column in the inverse currently
+            corresponding to the given column index of _A
+         */
         size_t insertion_index(uint32_t column_idx)
         {
             assert(column_idx < dim<1>(_A));
@@ -281,15 +317,15 @@ namespace ss
             blas::xcopy(m, A.cbegin() + src_col, dim<1>(A), &*it, 1);
         }
 
-        /* original matrix */
-        const mat_view<T>& _A;
+        /* reference matrix */
+        const mat_view<T> _A;
         /* A_gamma transposed */
         std::vector<T> _A_sub_t;
         /* the inverse of A_gamma */
         std::vector<T> _inv;
-        /* the indices of _A represented by the inverse */
-        std::vector<bool> _indices;
-        /* number of cols in _inv */
+        /* number of columns of _A corresponding to the inverse */
         uint32_t _n;
+        /* column indices of _A corresponding to the inverse */
+        std::vector<bool> _indices;
     };
 }
