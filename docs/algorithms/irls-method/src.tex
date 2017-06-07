@@ -1,0 +1,129 @@
+%%% Copyright 2017 International Business Machines Corporation
+\documentclass[11pt]{article} % use larger type; default would be 10pt
+
+\usepackage[utf8]{inputenc} % set input encoding (not needed with XeLaTeX)
+\usepackage[T1]{fontenc}
+
+
+%%% PAGE DIMENSIONS
+\usepackage[top=1.5in,bottom=1in,right=1in,left=1in,headheight=90pt,headsep=1cm]{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+ \geometry{margin=0.7in} % for example, change the margins to 2 inches all round
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+ \usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{amsmath}
+\usepackage{cases}
+\usepackage{ulem}
+\usepackage{listings}
+
+
+\usepackage{fancyhdr} % This should be set AFTER setting up the page geometry
+\pagestyle{fancy} % options: empty , plain , fancy
+\renewcommand{\headrulewidth}{0.4pt} % customise the layout...
+\lhead{}\chead{\footnotesize \textit{IBM}}\rhead{}
+\lfoot{}\cfoot{\thepage}\rfoot{}
+
+%%% SECTION TITLE APPEARANCE
+\usepackage{sectsty}
+
+\newenvironment{aside}
+  {\begin{mdframed}[style=0,%
+      leftline=false,rightline=false,leftmargin=2em,rightmargin=2em,%
+          innerleftmargin=0pt,innerrightmargin=0pt,linewidth=0.75pt,%
+      skipabove=7pt,skipbelow=7pt]\small}
+  {\end{mdframed}}
+
+%COLOURING
+\usepackage{color}
+\newcommand{\new}{\textcolor{red}}
+%\input{rgb}
+
+%%% ToC (table of contents) APPEARANCE
+\usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+
+
+\title{The Iterative Reweighted Least Squares Method\\ for $\ell_1$ Norm Minimisation}
+\author{Cecilia Aas}
+\date{October, 2015}
+
+
+\def\layersep{2.5cm}
+
+\begin{document}
+\lstset{language=C++,
+           commentstyle=\textcolor[rgb]{0.00,0.66,0.33},
+           keywordstyle=\textcolor[rgb]{0.00,0.00,1.00},
+           basicstyle=\footnotesize\ttfamily,
+           frame=lines,
+           framexleftmargin=2mm,
+           numbers=left,
+           numberstyle=\footnotesize,
+           stepnumber=1,
+           numbersep=1pt}
+\maketitle
+\section{Overview}
+The algorithm aims to solve the problem
+\begin{equation}
+\label{eq:l1min}
+\min\left|\left| \uline{x} \right| \right|_1 \text{ subject to } \uuline{A}\uline{x} = \uline{y}
+\end{equation}
+by finding the minimisers $\left\{x_0, x_1, \cdots \right\}$ of the functional
+\begin{equation}
+J_{\lambda}(x) = \frac{1}{2} \left| \left|\uuline{A} \uline{x} - \uline{y} \right| \right|_2^2 + \lambda \left| \left| \uline{x} \right| \right|_1 \; .
+\end{equation}
+for decreasing $\lambda$.  The algorithm does this by tracing out the \textit{homotopy path}, approaching the limit
+\begin{equation}
+\lim_{\lambda \rightarrow 0} J_{\lambda}(x) = \frac{1}{2} \left| \left|\uuline{A} \uline{x} - \uline{y} \right| \right|_2^2 \; .
+\end{equation}
+
+\section{Variables}
+We have the following variables,
+\begin{itemize}
+\item $m \times n$ sensing matrix, $\uuline{A}$
+\item signal vector of $m$ elements, $\uline{y}$
+\item solution vector of $n$ elements, $\uline{x}$
+\item weights vector of $n$ elements, $\uline{w}$
+\item the error, $\epsilon$
+\item iteration index $j$
+\end{itemize}
+
+\section{Algorithm}
+
+The iterative reweighted least square algorithms requires initialisation of
+\begin{itemize}
+\item the value of $\epsilon_0 = 0$
+\item the weights vector to $\uline{w} = \uline{1}$ (i.e., a vector with all elements equal to one)
+\end{itemize}
+In each iterative step $j$, the iterative reweighted least square algorithms updates the solution approximation, $\uline{x}^{(j)}$, and the weights, $\uline{w}^{(j)}$, as follows.
+\begin{itemize}
+\item the approximate solution is updated
+\begin{equation}
+\uline{x}^{(j+1)} = \uuline{D}_j^n \uuline{A}^T\left(\uuline{A} \uuline{D}^{-1} \uuline{A}^T\right) \uline{y}
+\end{equation}
+where the matrix $\uuline{D}$ is a diagonal matrix containing the weights,
+\begin{equation}
+D_{ii} = w_i^{(j)}
+\end{equation}
+\item the value of epsilon is updated
+\begin{equation}
+\epsilon_{j+1} =  \min\left(\epsilon_n, \frac{r\left(x^{(j+1)}\right)_{K+1}}{N}\right)
+\end{equation}
+where the vector $\uline{r}\left(\uline{x}\right)$ is defined to contain the non-increasing arrangement of the absolute values of the elements in $\uline{x}$; $r\left(\uline{x}\right)_i$ is thus the $i^{\text{th}}$ largest element of $\uline{x}$; a vector $\uline{x}$ is $k$-sparse if and only if $r\left(\uline{x}\right)_{k+1} = 0$
+\item the weights are updated
+\begin{equation}
+w_j^{(j+1)} = \frac{1}{\sqrt{\left(x_j^{(j+1)}\right)^2 + \epsilon_{j+1}^2}}
+\end{equation}
+\end{itemize}
+
+
+The loop breaks either
+\begin{itemize}
+\item when reaching the maximum number of iterations, $N_{iter}$, or
+\item when the infinity-norm of the residual vector (i.e., the lambda parameter in Eq.~(\ref{eq:l1min})) becomes smaller than the pre-set tolerance,
+\end{itemize}
+whichever happens first.
+\end{document}

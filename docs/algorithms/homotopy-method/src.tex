@@ -1,0 +1,224 @@
+%%% Copyright 2017 International Business Machines Corporation
+\documentclass[11pt]{article} % use larger type; default would be 10pt
+
+\usepackage[utf8]{inputenc} % set input encoding (not needed with XeLaTeX)
+\usepackage[T1]{fontenc}
+
+
+%%% PAGE DIMENSIONS
+\usepackage[top=1.5in,bottom=1in,right=1in,left=1in,headheight=90pt,headsep=1cm]{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+ \geometry{margin=0.7in} % for example, change the margins to 2 inches all round
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+ \usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{amsmath}
+\usepackage{cases}
+\usepackage{ulem}
+\usepackage{listings}
+
+
+\usepackage{fancyhdr} % This should be set AFTER setting up the page geometry
+\pagestyle{fancy} % options: empty , plain , fancy
+\renewcommand{\headrulewidth}{0.4pt} % customise the layout...
+\lhead{}\chead{\footnotesize \textit{IBM}}\rhead{}
+\lfoot{}\cfoot{\thepage}\rfoot{}
+
+%%% SECTION TITLE APPEARANCE
+\usepackage{sectsty}
+
+\newenvironment{aside}
+  {\begin{mdframed}[style=0,%
+      leftline=false,rightline=false,leftmargin=2em,rightmargin=2em,%
+          innerleftmargin=0pt,innerrightmargin=0pt,linewidth=0.75pt,%
+      skipabove=7pt,skipbelow=7pt]\small}
+  {\end{mdframed}}
+
+%COLOURING
+\usepackage{color}
+\newcommand{\new}{\textcolor{red}}
+%\input{rgb}
+
+%%% ToC (table of contents) APPEARANCE
+\usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+
+
+\title{The Homotopy Method for $\ell_1$ Norm Minimisation}
+\author{Cecilia Aas}
+\date{October, 2015}
+
+
+\def\layersep{2.5cm}
+
+\begin{document}
+\lstset{language=C++,
+           commentstyle=\textcolor[rgb]{0.00,0.66,0.33},
+           keywordstyle=\textcolor[rgb]{0.00,0.00,1.00},
+           basicstyle=\footnotesize\ttfamily,
+           frame=lines,
+           framexleftmargin=2mm,
+           numbers=left,
+           numberstyle=\footnotesize,
+           stepnumber=1,
+           numbersep=1pt}
+\maketitle
+\section{Overview}
+The algorithm aims to solve the problem
+\begin{equation}
+\label{eq:l1min}
+\min\left|\left| \uline{x} \right| \right|_1 \text{ subject to } \uuline{A}\uline{x} = \uline{y}
+\end{equation}
+by finding the minimisers $\left\{x_0, x_1, \cdots \right\}$ of the functional
+\begin{equation}
+J_{\lambda}(x) = \frac{1}{2} \left| \left|\uuline{A} \uline{x} - \uline{y} \right| \right|_2^2 + \lambda \left| \left| \uline{x} \right| \right|_1 \; .
+\end{equation}
+for decreasing $\lambda$.  The algorithm does this by tracing out the \textit{homotopy path}, approaching the limit
+\begin{equation}
+\lim_{\lambda \rightarrow 0} J_{\lambda}(x) = \frac{1}{2} \left| \left|\uuline{A} \uline{x} - \uline{y} \right| \right|_2^2 \; .
+\end{equation}
+
+\section{Variables}
+We have the following variables,
+\begin{itemize}
+\item $m \times n$ sensing matrix, $\uuline{A}$
+\item signal vector of $m$ elements, $\uline{y}$
+\item solution vector of $n$ elements, $\uline{x}$
+\item element index $\ell = \left\{0, 1, \cdots, n\right\}$ for solution vector $\uuline{x}$
+\item support $\Gamma_j$, i.e., the indices of the non-zero entries in $x_j$; the subscript $\Gamma_j$ on a matrix refers to the columns in that matrix corresponding to the support indices
+\item path segment index $j$
+\item residual vector $\uline{c}^{(j)} = \uuline{A}^T \left(\uline{y} - \uuline{A}\uline{x}^{(j-1)}\right)$
+\item the infinity-norm of the residual vector $\lambda_{j-1} = \left|\left| \uline{c}^{(j)}\right| \right|_{\infty}$ (corresponding to $\lambda$ in Eq.~(\ref{eq:l1min}))
+\item direction vector $\uline{d}^{(j)}$, giving the direction of the $j^{\text{th}}$ path segment
+\item magnitude $\gamma_j$ of the $j^{\text{th}}$ path segment
+\item minimizers $\left\{ \uline{x}^{(0)}, \uline{x}^{(1)}, \cdots\right\}$, where $\uline{x}^{(j + 1)} = \uline{x}^{(j)} +  \gamma_{j+1}  \uline{d}^{(j+1)}$
+\end{itemize}
+\ \\
+We evaluate these variables to yield the homotopy path towards the solution (for which $\lambda \rightarrow 0$),
+\begin{equation}
+\uline{x} = \uline{x}^{(0)} + \gamma_1  \uline{d}^{(1)} + \gamma_2  \uline{d}^{(2)}  + \cdots
+\end{equation}
+\clearpage
+
+\section{Algorithm}
+%The homotopy method can be implemented as follows.  The idea is to maintain
+%\begin{itemize}
+%\item the \textit{support} of $\uline{x}^{(i)}$, corresponding to the indices
+%\begin{equation}
+%\Gamma_i = \left\{l_0, l_1, \cdots, l_i \right\}
+%\end{equation}
+%for which $\uline{x}^{(i)}$ has non-zero elements
+%\item the \textit{homotopy path},
+%\begin{equation}
+%\uline{x}^{(i)} = \uline{x}^{(0)} + \gamma^{(1)} \uline{d^{(1)}} + \gamma^{(2)} \uline{d^{(2)}} + \cdots + \gamma^{(i)} \uline{d^{(i)}}
+%\end{equation}
+%\item the \textit{residual vector}
+%\begin{equation}
+%\uline{c^{(i)}} = \uuline{A}^T \left(\uline{y} - \uuline{A}\uline{x}^{(i-1)}\right)
+%\end{equation}
+%%\item the path segment lengths
+%%\begin{equation}
+%%\gamma_j = \underset{\ell}{\mathrm{min}} \left\{\gamma_j^+, \gamma_j^-\right\}
+%%\end{equation}
+%%where
+%%\begin{eqnarray}
+%%\gamma_j^+ & = & \underset{\ell \notin \Gamma_j}{\mathrm{min}} \left\{\frac{\lambda_{j-1} - c_{\ell}^{(j)}}{}, \frac{}{}  \right\}\\
+%%\gamma_j^- & = & \underset{\ell \in \Gamma_j}{\mathrm{min}} \left\{\frac{\lambda_0}{}, \frac{}{}  \right\}
+%%\end{eqnarray}
+%\end{itemize}
+
+\paragraph{Step 1} \ \\
+In the first step, we
+\begin{itemize}
+\item initialise the guess solution
+\begin{equation}
+\uline{x}^{(0)} = \uline{0}
+\end{equation}
+\item initialise the first residual vector
+\begin{equation}
+\uline{c}^{(1)} = \uuline{A}^T \left(\uline{y} - \uuline{A}\uline{x}^{(0)}\right) = \uuline{A}^T \uline{y}
+\end{equation}
+\item find the first index to be added to the support
+\begin{eqnarray}
+l_1 & = & \underset{\ell = 1 \cdots N}{\mathrm{argmax}} \left| \left\{ c_l^{(1)} \right\} \right|\\
+\Gamma_1 &\leftarrow & l_1
+\end{eqnarray}
+\item evaluate the first direction vector $\uline{d}^{(1)}$, from solving
+\begin{equation}
+\uuline{A_{\Gamma_1}}^T \uuline{A_{\Gamma_1}} \uline{d}^{(1)} = \mathrm{sign} \left(\uline{c}^{(1)}_{\Gamma_1}\right)  \text{; while } \forall l \notin \Gamma_i \text{, set  } d_l = 0
+\end{equation}
+now since $\left| \Gamma_1 \right| =\left| \left\{ l_1\right\} \right| = 1$,
+\begin{equation}
+\uuline{A_{\Gamma_1}}^T \uuline{A_{\Gamma_0}} = \left| \left| a_{l_1} \right| \right|_2^2 \Rightarrow d_{\ell}^{(1)} = \begin{cases} \frac{\mathrm{sign} \left(\uline{c}^{(1)}_{l_1}\right)}{ \left| \left| a_{l_1} \right| \right|_2^2} & \text{ for } \ell = \ell_1 \\
+0 & \text{ for } \ell \neq \ell_1
+\end{cases}
+\end{equation}
+\item evaluate the next point along the homotopy path
+\begin{equation}
+\uline{x}^{(1)} = \uline{x}^{(0)} + \gamma_1  \uline{d}^{(1)}
+\end{equation}
+where the homotopy path parameter $\gamma_1$ is
+\begin{equation}
+\gamma_1 = \underset{\ell}{\mathrm{min}}\left\{ \gamma_1^+, \gamma_1^-\right\}
+\end{equation}
+where we consider the \textit{positive} terms of the following sets
+\begin{eqnarray}
+ \gamma_1^+ & = & \underset{\ell \notin \Gamma_1 }{\mathrm{min}}\left\{\frac{\left|\left| \uline{c}^{(1)}\right| \right|_{\infty} - c_{\ell}^{(1)}}{1-\left.\left(\uuline{A}^T \uuline{A} \uline{d}^{(1)}\right)\right|_{\ell}}, \frac{\left|\left| \uline{c}^{(1)}\right| \right|_{\infty} + c_{\ell}^{(1)}}{1 + \left.\left(\uuline{A}^T \uuline{A} \uline{d}^{(1)}\right)\right|_{\ell}}  \right\}\\
+ \gamma_1^- & = & \underset{\ell \in \Gamma_1 }{\mathrm{min}}\left\{ -\frac{x_l^{(0)}}{d_l^{(1)}}  \right\}
+\end{eqnarray}
+\item find the next index to add or remove to the support
+\begin{equation}
+\ell_2 = \underset{\ell}{\mathrm{argmin}}\left\{\gamma_1^+, \gamma_1^-\right\}
+\end{equation}
+\end{itemize}
+
+
+
+\paragraph{Step $j = 2, 3, \cdots, N_{iter}$} \ \\
+In the following steps, indexed by $j$, we follow a similar procedure.
+\begin{itemize}
+\item adjust the support
+\begin{eqnarray}
+\text{if } \ell_j \in \Gamma_{j-1} &\text{ then }& \Gamma_j = \Gamma_{j-1} \setminus \ell_j\\
+\text{if } \ell_j \notin \Gamma_{j-1} & \text{ then }& \Gamma_j = \Gamma_{j-1} \cup \ell_j
+\end{eqnarray}
+\item update the residual vector
+\begin{equation}
+\uline{c}^{(j)} = \uuline{A}^T \left(\uline{y} - \uuline{A}\uline{x}^{(j-1)}\right)
+\end{equation}
+\item find the direction vector $\uline{d}^{(j)}$ from solving
+\begin{equation}
+\uuline{A_{\Gamma_j}}^T \uuline{A_{\Gamma_j}} \uline{d}_{\Gamma_j}^{(j)} = \mathrm{sign} \left(\uline{c}^{(j)}_{\Gamma_j}\right) \text{; while } \forall \ell \notin \Gamma_i \text{, set  } d_{\ell}^{(j)} = 0
+\end{equation}
+\item evaluate homotopy path parameter $\lambda_{j-1}$
+\begin{equation}
+\lambda_{j-1} = \left|\left| \uline{c}^{(j)}\right| \right|_{\infty}
+\end{equation}
+\item update the solution approximation $\uline{x}$
+\begin{equation}
+\uline{x}^{(j)} = \uline{x}^{(j-1)} + \gamma_j  \uline{d}^{(j)}
+\end{equation}
+where the homotopy path parameter $\gamma_j$ is
+\begin{equation}
+\gamma_j = \underset{\ell}{\mathrm{min}}\left\{ \gamma_j^+, \gamma_j^-\right\}
+\end{equation}
+where we consider the \textit{positive} terms of the following sets
+\begin{eqnarray}
+ \gamma_j^+ & = & \underset{\ell \notin \Gamma_1 }{\mathrm{min}}\left\{\frac{\left|\left| \uline{c}^{(j)}\right| \right|_{\infty} - c_{\ell}^{(j)}}{1-\left.\left(\uuline{A}^T \uuline{A} \uline{d}^{(j)}\right)\right|_{\ell}}, \frac{\left|\left| \uline{c}^{(j)}\right| \right|_{\infty} + c_{\ell}^{(j)}}{1 + \left.\left(\uuline{A}^T \uuline{A} \uline{d}^{(j)}\right)\right|_{\ell}}  \right\}\\
+ \gamma_j^- & = & \underset{\ell \notin \Gamma_j }{\mathrm{min}}\left\{ -\frac{\uline{x}_l^{(j-1)}}{\uline{d}_{\ell}^{(j)}}  \right\}
+\end{eqnarray}
+\item find the next index to add or remove to the support
+\begin{equation}
+\ell_{j+1} = \underset{\ell}{\mathrm{argmin}}\left\{\gamma_j^+, \gamma_j^-\right\}
+\end{equation}
+\end{itemize}
+
+The loop breaks either
+\begin{itemize}
+\item when reaching the maximum number of iterations, $N_{iter}$, or
+\item when the infinity-norm of the residual vector (i.e., the lambda parameter in Eq.~(\ref{eq:l1min})) becomes smaller than the pre-set tolerance,
+\end{itemize}
+whichever happens first.
+\end{document}

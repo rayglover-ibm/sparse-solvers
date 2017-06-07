@@ -1,0 +1,145 @@
+%%% Copyright 2017 International Business Machines Corporation
+\documentclass[11pt]{article} % use larger type; default would be 10pt
+
+\usepackage[utf8]{inputenc} % set input encoding (not needed with XeLaTeX)
+\usepackage[T1]{fontenc}
+
+
+%%% PAGE DIMENSIONS
+\usepackage[top=1.5in,bottom=1in,right=1in,left=1in,headheight=90pt,headsep=1cm]{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+ \geometry{margin=0.7in} % for example, change the margins to 2 inches all round
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+ \usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{amsmath}
+\usepackage{cases}
+\usepackage{ulem}
+\usepackage{listings}
+\usepackage{algorithm2e}
+
+
+\usepackage{fancyhdr} % This should be set AFTER setting up the page geometry
+\pagestyle{fancy} % options: empty , plain , fancy
+\renewcommand{\headrulewidth}{0.4pt} % customise the layout...
+\lhead{}\chead{\footnotesize \textit{IBM}}\rhead{}
+\lfoot{}\cfoot{\thepage}\rfoot{}
+
+%%% SECTION TITLE APPEARANCE
+\usepackage{sectsty}
+
+\newenvironment{aside}
+  {\begin{mdframed}[style=0,%
+      leftline=false,rightline=false,leftmargin=2em,rightmargin=2em,%
+          innerleftmargin=0pt,innerrightmargin=0pt,linewidth=0.75pt,%
+      skipabove=7pt,skipbelow=7pt]\small}
+  {\end{mdframed}}
+
+%COLOURING
+\usepackage{color}
+\newcommand{\new}{\textcolor{red}}
+%\input{rgb}
+
+%%% ToC (table of contents) APPEARANCE
+\usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+
+
+\title{Updating $\left(\uuline{A}^T \uuline{A}\right)^{-1}$ with the Addition and Removals of Columns in $\uuline{A}$}
+\author{Cecilia Aas}
+\date{October, 2015}
+
+
+
+\def\layersep{2.5cm}
+
+\begin{document}
+\lstset{language=C++,
+           commentstyle=\textcolor[rgb]{0.00,0.66,0.33},
+           keywordstyle=\textcolor[rgb]{0.00,0.00,1.00},
+           basicstyle=\footnotesize\ttfamily,
+           frame=lines,
+           framexleftmargin=2mm,
+           numbers=left,
+           numberstyle=\footnotesize,
+           stepnumber=1,
+           numbersep=1pt}
+\maketitle
+\section{Overview}
+The algorithm aims to solve the following problem:\\
+
+\begin{enumerate}
+\item We have a matrix $\uuline{A}$ and we have calculated the inverse $\left(\uuline{A}^T\uuline{A}\right)^{-1}$.
+\item We now add or remove a column $\uline{v}$ to the matrix $\uuline{A}$, forming matrix $\uuline{A}'$.
+\item We want to calculate $\left(\uuline{A'}^T \uuline{A'}\right)^{-1}$ given our knowledge of $\left(\uuline{A}^T\uuline{A}\right)^{-1}$, instead of from scratch.
+\end{enumerate}
+
+\section{Background Theory}
+
+\subsection{Matrix-Inversion Lemma}
+It is known that for correctly-sized matrices $\uuline{A}$, $\uuline{U}$, $\uuline{C}$ and $\uuline{V}$ ,
+\begin{equation}
+\left(\uuline{A} + \uuline{U}\uuline{C}\uuline{V}\right)^{-1} = \uuline{A}^{-1} - \uuline{A}^{-1}\uuline{U} \left(\uuline{C}^{-1} + \uuline{V} \uuline{A}^{-1} \uuline{U}\right)^{-1}\uuline{V} \uuline{A}^{-1} \; .
+\end{equation}
+
+For the special case of adding the outer product of two column vectors $\uline{u}$ an $\uline{v}$, we obtain
+\begin{equation}
+\left(\uuline{A} + \uline{u}\uuline{v} \right)^{-1} = \uuline{A}^{-1} - c\uuline{A}^{-1}\uline{u} \uline{v}^T \uuline{A}^{-1} \; ,
+\end{equation}
+where
+\begin{equation}
+c = \frac{1}{1 + \uline{u}^T \uuline{A}^{-1}\uline{v}} \; .
+\end{equation}
+
+\subsection{Inverting a Partitioned Matrix}
+The inverse of a partitioned matrix can be expressed as
+\begin{equation}
+\left[\begin{array}{cc} \uuline{A_{11}} & \uuline{A_{12}}\\ \uuline{A_{21}} & \uuline{A_{22}} \end{array} \right]^{-1} = \left[\begin{array}{cc} \uuline{F_{11}^{-1}} & -\uuline{F_{11}^{-1}}\uuline{A_{12}}\uuline{A_{22}^{-1}}\\ -\uuline{A_{22}^{-1}}\uuline{A_{21}}\uuline{F_{11}^{-1}} & \uuline{F_{22}^{-1}} \end{array} \right]^{-1} \; ,
+\end{equation}
+where
+\begin{eqnarray}
+\uuline{F_{11}^{-1}} & = & \uuline{A_{11}^{-1}} + \uuline{A_{11}^{-1}} \uuline{A_{12}} \uuline{F_{22}^{-1}} \uuline{A_{21}} \uuline{A_{11}^{-1}} \; ,\\
+\uuline{F_{22}^{-1}} & = & \uuline{A_{22}^{-1}} + \uuline{A_{22}^{-1}} \uuline{A_{21}} \uuline{F_{11}^{-1}} \uuline{A_{12}} \uuline{A_{22}^{-1}} \; .
+\end{eqnarray}
+\clearpage
+
+\section{Algorithms for Adding and Removing Columns}
+\begin{algorithm}
+\hrulefill \\
+Inputs: original matrix $\uuline{A}$, inverse $\uuline{B} = \left(\uuline{A}^T \uuline{A}\right)^{-1}$, column vector $\uline{v}$, column index $j$\\
+Outputs: updated inverse $\uuline{B}' = \left(\uuline{A'}^T \uuline{A'}\right)^{-1}$\\
+Procedure:
+\begin{enumerate}
+\item $\uline{u_1} \leftarrow \uuline{A}^T \uline{v}$
+\item $\uline{u_2} \leftarrow \uuline{B} \uline{u_1}$
+\item $d \leftarrow \left( \uline{v}^T\uline{v} - \uline{u_1}^T\uline{u_2} \right)^{-1}$
+\item $\uline{u_3} \leftarrow d \uline{u_2}$
+\item $\uuline{Q} \leftarrow \uuline{B} + d\uline{u_2}\uline{u_2}^T$
+\item $\uuline{B}' \leftarrow \left[ \begin{array}{cc} \uuline{Q} & -\uline{u_3}\\ -\uline{u_3}^T & d \\\end{array} \right]$
+\item Permute the last row of $\uuline{B}'$ to row $j$, and permute the last column of $\uuline{B}'$ to column $j$.
+\end{enumerate}
+\hrulefill
+\caption{Algorithm for updating $\left(\uuline{A}^T\uuline{A}\right)^{-1}$ upon adding a column $\uline{v}$ to $\uuline{A}$ at column index $j$.}
+\end{algorithm}
+
+\begin{algorithm}
+\hrulefill \\
+Inputs: original matrix $\uuline{A}$, inverse $\uuline{B} = \left(\uuline{A}^T \uuline{A}\right)^{-1}$, column index $j$\\
+Outputs: updated inverse $\uuline{B}' = \left(\uuline{A'}^T \uuline{A'}\right)^{-1}$\\
+Procedure:
+\begin{enumerate}
+\item Permute row $j$ to the last row of $\uuline{B}'$, and permute column $j$ to the last column of $\uuline{B}$.
+\item $\uuline{Q} \leftarrow \uuline{B_{1:n-1, 1:n-1}}$ (i.e., remove last row and last column from $\uuline{B}$)
+\item $d \leftarrow B_{nn}$
+\item $\uline{u_3} \leftarrow\uuline{B_{1:n-1, n}}$
+\item $\uline{u_2} \leftarrow \frac{1}{d} \uline{u_3}$
+\item $\uuline{B}' \leftarrow \uuline{Q} - d\uline{u_2} \uline{u_2}^T$
+\end{enumerate}
+\hrulefill
+\caption{Algorithm for updating $\left(\uuline{A}^T\uuline{A}\right)^{-1}$ upon removing a column $\uline{v}$ from $\uuline{A}$ at column index $j$.}
+\end{algorithm}
+
+
+\end{document}
