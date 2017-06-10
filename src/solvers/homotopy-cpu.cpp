@@ -101,60 +101,6 @@ namespace ss
     }
 
     template<typename T>
-    void shift_column(
-        mat_view<T>& A,
-        const size_t col,
-        const size_t dest_col
-        )
-    {
-        assert(dim<1>(A) > col);
-        assert(dim<1>(A) > dest_col);
-
-        if (col == dest_col) { return; }
-        const int32_t col_inc { dest_col < col ? -1 : 1 };
-
-        /* for each row */
-        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
-            /* take the value to move */
-            const T val{ A(r, col) };
-
-            /* for each col, starting at the src col */
-            for (size_t c{ col }; c != dest_col; c += col_inc) {
-                /* shift column left/right */
-                A(r, c) = A(r, c + col_inc);
-            }
-
-            A(r, dest_col) = val;
-        }
-    }
-
-    template<typename T>
-    void shift_row(
-        mat_view<T>& A,
-        const size_t row,
-        const size_t dest_row
-        )
-    {
-        assert(dim<0>(A) > row);
-        assert(dim<0>(A) > dest_row);
-
-        if (row == dest_row) { return; }
-        const int32_t row_inc{ dest_row < row ? -1 : 1 };
-
-        /* store the src row */
-        xt::xtensor<T, 1> x = xt::view(A, row);
-
-        for (size_t r{ row }; r != dest_row; r += row_inc)
-        {
-            /* shift row upward/downward */
-            xt::view(A, r) = xt::view(A, int(r) + row_inc);
-        }
-
-        /* copy row to destination */
-        view(A, dest_row) = x;
-    }
-
-    template<typename T>
     void sign_vector(
         const size_t  n,
         const T* x,

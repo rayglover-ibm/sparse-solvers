@@ -20,6 +20,64 @@ limitations under the License.  */
 #include <xtensor/xview.hpp>
 
 #include <memory>
+#include <cassert>
+
+namespace ss { namespace detail
+{
+    template <typename T>
+    void shift_column(
+        mat_view<T>& A,
+        const size_t col,
+        const size_t dest_col
+        )
+    {
+        assert(dim<1>(A) > col);
+        assert(dim<1>(A) > dest_col);
+
+        if (col == dest_col) { return; }
+        const int32_t col_inc { dest_col < col ? -1 : 1 };
+
+        /* for each row */
+        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
+            /* take the value to move */
+            const T val{ A(r, col) };
+
+            /* for each col, starting at the src col */
+            for (size_t c{ col }; c != dest_col; c += col_inc) {
+                /* shift column left/right */
+                A(r, c) = A(r, c + col_inc);
+            }
+
+            A(r, dest_col) = val;
+        }
+    }
+
+    template<typename T>
+    void shift_row(
+        mat_view<T>& A,
+        const size_t row,
+        const size_t dest_row
+        )
+    {
+        assert(dim<0>(A) > row);
+        assert(dim<0>(A) > dest_row);
+
+        if (row == dest_row) { return; }
+        const int32_t row_inc{ dest_row < row ? -1 : 1 };
+
+        /* store the src row */
+        xt::xtensor<T, 1> x = xt::view(A, row);
+
+        for (size_t r{ row }; r != dest_row; r += row_inc)
+        {
+            /* shift row upward/downward */
+            xt::view(A, r) = xt::view(A, int(r) + row_inc);
+        }
+
+        /* copy row to destination */
+        view(A, dest_row) = x;
+    }
+}}
 
 namespace ss
 {
@@ -95,12 +153,6 @@ namespace ss
                     d /= a - b;
                 }
 
-// Py           u3 = d * u2
-                auto u3 = std::make_unique<T[]>(_n);
-
-                std::copy_n(u2.get(), _n, u3.get());
-                blas::xscal(_n, d, u3.get(), 1);
-
 // Py           F11inv = current_inverse + (d * np.outer(u2, u2.T))
                 mat<T> F11inv({ _n, _n });
                 std::copy_n(_inv.data(), _inv.size(), F11inv.begin());
@@ -116,31 +168,28 @@ namespace ss
                     uint32_t new_n { _n + 1 };
                     _inv.assign(new_n * new_n, 0);
 
-                    auto mut_inv = as_span<2>(_inv.data(), { new_n, new_n });
+                    auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
                     {
                         /* assign F11inv to top left */
 // Py                   new_inverse[0:N, 0:N] = F11inv # [F11inv - u3 - u3' F22inv]
-                        for (size_t r{ 0 }; r < _n; ++r) {
-                            for (size_t c{ 0 }; c < _n; ++c) {
-                                mut_inv(r, c) = F11inv(r, c);
-                            }
-                        }
+                        blas::xomatcopy(CblasRowMajor, CblasNoTrans, _n, _n, 1.0,
+                            F11inv.cbegin(), _n,
+                            new_inv.begin(), new_n);
 
-                        /* assign u3 to right-most column */
+                        /* assign u3 to bottom row/right-most column */
 // Py                   new_inverse[0:N, N] = -u3
-                        for (size_t r{ 0 }; r < _n; ++r) {
-                            mut_inv(r, _n) = -u3[r];
-                        }
-
-                        /* assign u3 to bottom row */
 // Py                   new_inverse[N, 0:N] = -u3.T
-                        for (size_t c{ 0 }; c < _n; ++c) {
-                            mut_inv(_n, c) = -u3[c];
+                        for (size_t i{ 0 }; i < _n; ++i)
+                        {
+                            T u3{ -d * u2[i] };
+
+                            new_inv(i, _n) = u3;
+                            new_inv(_n, i) = u3;
                         }
 
                         /* assign u3 to bottom row */
 // Py                   new_inverse[N, N] = d
-                        mut_inv(_n, _n) = d;
+                        new_inv(_n, _n) = d;
                     }
 
                     /* permute to get the matrix corresponding to original X */
@@ -152,8 +201,8 @@ namespace ss
                         size_t idx{ insertion_index(column_idx) };
 
                         /* shift to position */
-                        shift_column(mut_inv, _n, idx);
-                        shift_row(mut_inv, _n, idx);
+                        detail::shift_column(new_inv, _n, idx);
+                        detail::shift_row(new_inv, _n, idx);
 
                         /* update A_sub_t */
                         insert_col_into_row(_A_sub_t, _A, column_idx, idx);
@@ -190,7 +239,7 @@ namespace ss
 // Py           current_inverse = current_inverse[permute_order, :]
 // Py           current_inverse = current_inverse[:, permute_order]
                 {
-                    mat_view<T> mut_inv = as_span<2>(_inv.data(), { _n, _n });
+                    mat_view<T> new_inv = as_span<2>(_inv.data(), { _n, _n });
 
                     /* calculate column to remove */
                     size_t idx{ insertion_index(column_idx) };
@@ -198,12 +247,12 @@ namespace ss
                     {
                         mat_view<T> As_t{ subset_transposed() };
                         /* shift row to the bottom */
-                        shift_row(As_t, idx, dim<0>(As_t) - 1);
+                        detail::shift_row(As_t, idx, dim<0>(As_t) - 1);
                     }
 
                     /* shift to position */
-                    shift_column(mut_inv, idx, dim<1>(mut_inv) - 1);
-                    shift_row(mut_inv, idx, dim<1>(mut_inv) - 1);
+                    detail::shift_column(new_inv, idx, dim<1>(new_inv) - 1);
+                    detail::shift_row(new_inv, idx, dim<1>(new_inv) - 1);
                 }
 
                 uint32_t new_n{ _n - 1 };
@@ -215,16 +264,11 @@ namespace ss
 // Py               d = current_inverse[N - 1, N - 1]
                     T d{ inv(new_n, new_n) };
 
-// Py               u3 = -1.0 * current_inverse[0:N - 1, N - 1]
+// Py               u2 = -(1.0 / d) * current_inverse[0:N - 1, N - 1]
                     /* copy last column */
-                    auto u3 = std::make_unique<T[]>(new_n);
-                    blas::xcopy(new_n, inv.cbegin() + new_n, new_n + 1, u3.get(), 1);
-                    blas::xscal(new_n, -1, u3.get(), 1);
-
-// py               u2 = (1.0 / d) * u3
                     auto u2 = std::make_unique<T[]>(new_n);
-                    blas::xcopy(new_n, u3.get(), 1, u2.get(), 1);
-                    blas::xscal(new_n, (T)1.0 / d, u2.get(), 1);
+                    blas::xcopy(new_n, inv.cbegin() + new_n, new_n + 1, u2.get(), 1);
+                    blas::xscal(new_n, -(T(1) / d), u2.get(), 1);
 
 // Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
 // Py               new_inverse = F11inv - (d* np.outer(u2, u2.T))
@@ -244,8 +288,7 @@ namespace ss
                 }
 
                 /* resize and assign */
-                _inv.assign(F11inv.size(), 0);
-                std::copy_n(F11inv.cbegin(), F11inv.size(), _inv.data());
+                _inv.assign(F11inv.cbegin(), F11inv.cend());
             }
 
             _indices[column_idx] = false;
@@ -312,9 +355,9 @@ namespace ss
             )
         {
             auto m = dim<0>(A);
-            auto it = v.insert(v.begin() + (dest_row * m), m, 0.0);
+            auto x = xt::view(A, xt::all(), src_col);
 
-            blas::xcopy(m, A.cbegin() + src_col, dim<1>(A), &*it, 1);
+            v.insert(v.begin() + (dest_row * m), x.cbegin(), x.cend());
         }
 
         /* reference matrix */
