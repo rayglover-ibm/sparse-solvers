@@ -86,6 +86,24 @@ namespace blas
         cblas_scopy(n, x, incx, y, incy);
     }
 
+    inline void xomatcopy(
+        const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans,
+        const blasint crows, const blasint ccols, const float calpha,
+        const float *a, const blasint clda,
+              float *b, const blasint cldb)
+    {
+        cblas_somatcopy(order, trans, crows, ccols, calpha, a, clda, b, cldb);
+    }
+
+    inline void xomatcopy(
+        const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans,
+        const blasint crows, const blasint ccols, const double calpha,
+        const double *a, const blasint clda,
+              double *b, const blasint cldb)
+    {
+        cblas_domatcopy(order, trans, crows, ccols, calpha, a, clda, b, cldb);
+    }
+
     inline void xscal(
         const blasint N, const double alpha, double *X, const blasint incX) {
         cblas_dscal(N, alpha, X, incX);
