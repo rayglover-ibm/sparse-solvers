@@ -24,34 +24,83 @@ limitations under the License.  */
 
 namespace ss { namespace detail
 {
+    /*
+     *  Permutes the given matrix `A` such that the row and column `src`
+     *  is moved to `dest`, with intermediate rows and columns shifted to
+     *  account for this movement.
+     */
     template <typename T>
-    void shift_column(
-        mat_view<T>& A,
-        const size_t col,
-        const size_t dest_col
+    void square_permute(mat_view<T> A,
+        const size_t src,
+        const size_t dest
         )
     {
-        assert(dim<1>(A) > col);
-        assert(dim<1>(A) > dest_col);
+        assert(dim<0>(A) == dim<1>(A));
+        T* ptr = &A(0, 0);
 
-        if (col == dest_col) { return; }
-        const int32_t col_inc { dest_col < col ? -1 : 1 };
+        auto N = dim<1>(A);
+        if (N == 1 || dest == src) {
+            return;
+        }
+        else if (dest > src) {
+            /* left to right */
+            for (size_t i=0; i < N * N; i++)
+            {
+                auto n = i % N;
+                auto m = i / N;
 
-        /* for each row */
-        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
-            /* take the value to move */
-            const T val{ A(r, col) };
+                /* row swap */
+                if (n == 0 && m >= src && m < dest) {
+                    for (size_t j = i; j < i + N; j++) {
+                        T tmp = ptr[j];
 
-            /* for each col, starting at the src col */
-            for (size_t c{ col }; c != dest_col; c += col_inc) {
-                /* shift column left/right */
-                A(r, c) = A(r, c + col_inc);
+                        ptr[j] = ptr[j + N];
+                        ptr[j + N] = tmp;
+                    }
+                }
+
+                /* column swap */
+                if (n >= src && n < dest) {
+                    T tmp = ptr[i];
+
+                    ptr[i] = ptr[i + 1];
+                    ptr[i + 1] = tmp;
+                }
             }
+        }
+        else {
+            /* right to left */
+            for (size_t i=(N * N)-1; i > 0; i--)
+            {
+                auto n = i % N;
+                auto m = i / N;
 
-            A(r, dest_col) = val;
+                /* row swap */
+                if (n == N - 1 && m <= src && m > dest) {
+                    for (size_t j = i - (N-1); j <= i; j++) {
+                        T tmp = ptr[j];
+
+                        ptr[j] = ptr[j - N];
+                        ptr[j - N] = tmp;
+                    }
+                }
+
+                /* column swap */
+                if (n <= src && n > dest) {
+                    T tmp = ptr[i];
+
+                    ptr[i] = ptr[i - 1];
+                    ptr[i - 1] = tmp;
+                }
+            }
         }
     }
 
+    /*
+     *  Moves the row `src` within the given matrix `A` to `dest`,
+     *  with intermediate rows and shifted to account for this
+     *  movement.
+     */
     template<typename T>
     void shift_row(
         mat_view<T>& A,
@@ -201,8 +250,7 @@ namespace ss
                         size_t idx{ insertion_index(column_idx) };
 
                         /* shift to position */
-                        detail::shift_column(new_inv, _n, idx);
-                        detail::shift_row(new_inv, _n, idx);
+                        detail::square_permute(new_inv, _n, idx);
 
                         /* update A_sub_t */
                         insert_col_into_row(_A_sub_t, _A, column_idx, idx);
@@ -251,8 +299,7 @@ namespace ss
                     }
 
                     /* shift to position */
-                    detail::shift_column(new_inv, idx, dim<1>(new_inv) - 1);
-                    detail::shift_row(new_inv, idx, dim<1>(new_inv) - 1);
+                    detail::square_permute(new_inv, idx, dim<1>(new_inv) - 1);
                 }
 
                 uint32_t new_n{ _n - 1 };

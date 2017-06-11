@@ -68,6 +68,10 @@ if (${ss}_WITH_TESTS)
     add_executable ("${ss}_test"
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"
+        "src/linalg/online_inverse_test.cpp"
+    )
+    target_include_directories ("${ss}_test"
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
     copy_target_files (${ss}_test ${ss})
