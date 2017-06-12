@@ -5,8 +5,6 @@
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xrandom.hpp>
 #include <xtensor/xview.hpp>
-#include <xtensor/xio.hpp>
-#include <xtensor/xmissing.hpp>
 
 using xt::xtensor;
 using ss::mat;
