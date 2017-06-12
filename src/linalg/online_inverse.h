@@ -36,22 +36,20 @@ namespace ss { namespace detail
         )
     {
         assert(dim<0>(A) == dim<1>(A));
-        T* ptr = &A(0, 0);
 
-        auto N = dim<1>(A);
-        if (N == 1 || dest == src) {
+        T* ptr = &A(0, 0);
+        ptrdiff_t N = dim<1>(A), srci = src, desti = dest;
+
+        if (N == 1 || desti == srci) {
             return;
         }
-        else if (dest > src) {
-            /* left to right */
-            for (size_t i=0; i < N * N; i++)
+        else if (desti > srci) {
+            /* traverse forwards */
+            for (ptrdiff_t m = 0, i = 0; m < N; m++)
             {
-                auto n = i % N;
-                auto m = i / N;
-
                 /* row swap */
-                if (n == 0 && m >= src && m < dest) {
-                    for (size_t j = i; j < i + N; j++) {
+                if (m >= srci && m < desti) {
+                    for (ptrdiff_t j = i; j < i + N; j++) {
                         T tmp = ptr[j];
 
                         ptr[j] = ptr[j + N];
@@ -59,25 +57,29 @@ namespace ss { namespace detail
                     }
                 }
 
+                /* move to src column */
+                i += srci;
+
                 /* column swap */
-                if (n >= src && n < dest) {
+                for (ptrdiff_t n = srci; n < desti; n++, i++) {
                     T tmp = ptr[i];
 
                     ptr[i] = ptr[i + 1];
                     ptr[i + 1] = tmp;
                 }
+
+                /* move to next row */
+                i += N - desti;
             }
         }
         else {
-            /* right to left */
-            for (size_t i=(N * N)-1; i > 0; i--)
+            /* traverse backwards */
+            for (ptrdiff_t m = N-1, i = (N * N)-1; m >= 0; m--)
             {
-                auto n = i % N;
-                auto m = i / N;
-
                 /* row swap */
-                if (n == N - 1 && m <= src && m > dest) {
-                    for (size_t j = i - (N-1); j <= i; j++) {
+                if (m <= srci && m > desti) {
+                    for (ptrdiff_t j = i; j > i - N; j--)
+                    {
                         T tmp = ptr[j];
 
                         ptr[j] = ptr[j - N];
@@ -85,13 +87,19 @@ namespace ss { namespace detail
                     }
                 }
 
+                /* move to src column */
+                i -= (N - 1) - srci;
+
                 /* column swap */
-                if (n <= src && n > dest) {
+                for (ptrdiff_t n = srci; n > desti; n--, i--) {
                     T tmp = ptr[i];
 
                     ptr[i] = ptr[i - 1];
                     ptr[i - 1] = tmp;
                 }
+
+                /* move to next row */
+                i -= desti + 1;
             }
         }
     }
