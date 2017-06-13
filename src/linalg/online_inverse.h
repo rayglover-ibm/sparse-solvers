@@ -101,6 +101,42 @@ namespace ss { namespace detail
             }
         }
     }
+
+    template <typename T>
+    void erase_last_rowcol(
+        std::vector<T>& v,
+        const size_t M,
+        const size_t N
+        )
+    {
+        assert(v.size() == M * N);
+
+        /* traversing forwards, shift values such
+           that the last column is removed */
+        size_t i = 0;
+
+        for (size_t m = 0; m < M-1; m++) {
+            for (size_t n = 0; n < N-1; n++, i++) {
+                v[i] = v[i + m];
+            }
+        }
+
+        v.erase(v.end() - (N + M - 1), v.end());
+    }
+
+    template <typename T>
+    void insert_col_into_row(
+        std::vector<T>& v,
+        const mat_view<T>& A,
+        const size_t src_col,
+        const size_t dest_row
+        )
+    {
+        auto m = dim<0>(A);
+        auto x = xt::view(A, xt::all(), src_col);
+
+        v.insert(v.begin() + (dest_row * m), x.cbegin(), x.cend());
+    }
 }}
 
 namespace ss
@@ -140,7 +176,7 @@ namespace ss
             if (_n == 0) {
                 /* initialize */
 // Py           A_gamma = helper.subset_array(A, lambda_indices)
-                insert_col_into_row(_A_sub_t, _A, column_idx, 0);
+                detail::insert_col_into_row(_A_sub_t, _A, column_idx, 0);
 
 // Py           invAtA = 1.0 / (np.linalg.norm(A_gamma) * np.linalg.norm(A_gamma))
                 T A_gamma_norm{ blas::xnrm2(M, _A_sub_t.data(), 1) };
@@ -191,7 +227,6 @@ namespace ss
                 {
                     uint32_t new_n{ _n + 1 };
                     _inv.resize(new_n * new_n, 0);
-
                     auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
                     {
                         /* assign F11inv to top left */
@@ -211,7 +246,7 @@ namespace ss
                             new_inv(_n, i) = u3;
                         }
 
-                        /* assign u3 to bottom row */
+                        /* assign u3 to bottom right */
 // Py                   new_inverse[N, N] = d
                         new_inv(_n, _n) = d;
                     }
@@ -228,7 +263,7 @@ namespace ss
                         detail::square_permute(new_inv, _n, idx);
 
                         /* update A_sub_t */
-                        insert_col_into_row(_A_sub_t, _A, column_idx, idx);
+                        detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
                     }
                 }
             }
@@ -258,7 +293,7 @@ namespace ss
             }
             else {
                 /* permute to bring the column at the end in X */
-                const mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
+                mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
 
 // Py           permute_order = np.hstack((np.arange(0, pos_vCol), np.arange(pos_vCol + 1, N), pos_vCol))
 // Py           current_inverse = current_inverse[permute_order, :]
@@ -271,24 +306,19 @@ namespace ss
                     auto it = _A_sub_t.begin() + (idx * dim<0>(_A));
                     _A_sub_t.erase(it, it + dim<0>(_A));
 
-                    /* shift to position */
+                    /* shift to last column */
                     detail::square_permute(inv, idx, dim<1>(inv) - 1);
                 }
 
-                uint32_t new_n{ _n - 1 };
+                /* update the inverse by removing the last column */
                 {
-// Py               #update the inverse by removing the last column
+                    uint32_t new_n{ _n - 1 };
+
 // Py               d = current_inverse[N - 1, N - 1]
                     T d{ inv(new_n, new_n) };
 
 // Py               u2 = -(1.0 / d) * current_inverse[0:N - 1, N - 1]
-                    /* copy last column */
-                    auto u2 = std::make_unique<T[]>(new_n);
-                    blas::xcopy(new_n, inv.cbegin() + new_n, new_n + 1, u2.get(), 1);
-                    blas::xscal(new_n, -(T(1) / d), u2.get(), 1);
-
-                    mat<T> F11inv({ new_n, new_n });
-                    F11inv = xt::view(inv, xt::range(0u, new_n), xt::range(0u, new_n));
+                    blas::xscal(new_n, -(T(1) / d), &inv(0, new_n), _n);
 
 // Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
 // Py               new_inverse = F11inv - (d * np.outer(u2, u2.T))
@@ -297,12 +327,12 @@ namespace ss
                        note: A - d * x == -d * x + A
                      */
                     blas::xger(CblasRowMajor, new_n, new_n, -d,
-                        u2.get(), 1,
-                        u2.get(), 1,
-                        F11inv.begin(), new_n);
+                        &inv(0, new_n), _n,
+                        &inv(0, new_n), _n,
+                        &inv(0, 0),     _n);
 
                     /* resize and assign */
-                    _inv.assign(F11inv.cbegin(), F11inv.cend());
+                    detail::erase_last_rowcol(_inv, _n, _n);
                 }
             }
 
@@ -362,18 +392,7 @@ namespace ss
             return idx;
         }
 
-        void insert_col_into_row(
-            std::vector<T>& v,
-            const mat_view<T>& A,
-            const size_t src_col,
-            const size_t dest_row
-            )
-        {
-            auto m = dim<0>(A);
-            auto x = xt::view(A, xt::all(), src_col);
 
-            v.insert(v.begin() + (dest_row * m), x.cbegin(), x.cend());
-        }
 
         /* reference matrix */
         const mat_view<T> _A;

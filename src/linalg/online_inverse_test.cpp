@@ -111,3 +111,18 @@ TEST(online_inverse, square_permute_4)
         EXPECT_EQ(A_tmp, A);
     }
 }
+
+TEST(online_inverse, erase_last_rowcol)
+{
+    std::vector<float> A{
+        1, 2, 3,
+        4, 5, 6,
+        7, 8, 9
+    };
+
+    ss::detail::erase_last_rowcol(A, 3, 3);
+    EXPECT_EQ(A, (std::vector<float>{ 1, 2, 4, 5 }));
+
+    ss::detail::erase_last_rowcol(A, 2, 2);
+    EXPECT_EQ(A, (std::vector<float>{ 1 }));
+}
