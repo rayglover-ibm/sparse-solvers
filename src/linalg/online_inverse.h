@@ -111,17 +111,40 @@ namespace ss { namespace detail
     {
         assert(v.size() == M * N);
 
-        /* traversing forwards, shift values such
-           that the last column is removed */
         size_t i = 0;
-
-        for (size_t m = 0; m < M-1; m++) {
-            for (size_t n = 0; n < N-1; n++, i++) {
+        for (size_t m = 0; m < M-1; m++)
+        {
+            /* traversing forwards, shift values left such
+             * that the last column is removed */
+            for (size_t n = 0; n < N-1; n++, i++)
                 v[i] = v[i + m];
-            }
         }
 
         v.erase(v.end() - (N + M - 1), v.end());
+    }
+
+    template <typename T>
+    void insert_last_rowcol(
+        std::vector<T>& v,
+        const size_t M,
+        const size_t N,
+        const T& val
+        )
+    {
+        assert(v.size() == M * N);
+        v.resize(v.size() + N + M + 1, val);
+
+        ptrdiff_t i = (M * N) - 1;
+        for (ptrdiff_t m = M-1; m > 0; m--)
+        {
+            /* fill last column */
+            v[i + m + 1] = val;
+
+            /* traversing backwards, shift values right such
+             * that a column is appended */
+            for (ptrdiff_t n = N-1; n >= 0; n--, i--)
+                v[i + m] = v[i];
+        }
     }
 
     template <typename T>
@@ -213,58 +236,46 @@ namespace ss
                     d /= a - b;
                 }
 
-// Py           F11inv = current_inverse + (d * np.outer(u2, u2.T))
-                mat<T> F11inv({ _n, _n });
-                std::copy_n(_inv.data(), _inv.size(), F11inv.begin());
-
 // Py           A := alpha*x*y**T + A
                 blas::xger(CblasRowMajor, _n, _n, d,
                     u2.get(), 1,
                     u2.get(), 1,
-                    F11inv.begin(), _n);
+                    _inv.data(), _n);
 
-                /* reshape _inv */
+                uint32_t new_n{ _n + 1 };
+
+                detail::insert_last_rowcol(_inv, _n, _n, T(0));
+                auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
                 {
-                    uint32_t new_n{ _n + 1 };
-                    _inv.resize(new_n * new_n, 0);
-                    auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
+                    /* assign u3 to bottom row/right-most column */
+// Py               new_inverse[0:N, N] = -u3
+// Py               new_inverse[N, 0:N] = -u3.T
+                    for (size_t i{ 0 }; i < _n; ++i)
                     {
-                        /* assign F11inv to top left */
-// Py                   new_inverse[0:N, 0:N] = F11inv # [F11inv - u3 - u3' F22inv]
-                        blas::xomatcopy(CblasRowMajor, CblasNoTrans, _n, _n, 1.0,
-                            F11inv.cbegin(), _n,
-                            new_inv.begin(), new_n);
+                        T u3{ -d * u2[i] };
 
-                        /* assign u3 to bottom row/right-most column */
-// Py                   new_inverse[0:N, N] = -u3
-// Py                   new_inverse[N, 0:N] = -u3.T
-                        for (size_t i{ 0 }; i < _n; ++i)
-                        {
-                            T u3{ -d * u2[i] };
-
-                            new_inv(i, _n) = u3;
-                            new_inv(_n, i) = u3;
-                        }
-
-                        /* assign u3 to bottom right */
-// Py                   new_inverse[N, N] = d
-                        new_inv(_n, _n) = d;
+                        new_inv(i, _n) = u3;
+                        new_inv(_n, i) = u3;
                     }
 
-                    /* permute to get the matrix corresponding to original X */
-// Py               permute_order = np.hstack((np.arange(0, pos_vCol), N, np.arange(pos_vCol, N)))
-// Py               new_inverse = new_inverse[:, permute_order]
-// Py               new_inverse = new_inverse[permute_order, :]
-                    {
-                        /* calculate destination column */
-                        size_t idx{ insertion_index(column_idx) };
+                    /* assign u3 to bottom right */
+// Py               new_inverse[N, N] = d
+                    new_inv(_n, _n) = d;
+                }
 
-                        /* shift to position */
-                        detail::square_permute(new_inv, _n, idx);
+                /* permute to get the matrix corresponding to original X */
+// Py           permute_order = np.hstack((np.arange(0, pos_vCol), N, np.arange(pos_vCol, N)))
+// Py           new_inverse = new_inverse[:, permute_order]
+// Py           new_inverse = new_inverse[permute_order, :]
+                {
+                    /* calculate destination column */
+                    size_t idx{ insertion_index(column_idx) };
 
-                        /* update A_sub_t */
-                        detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
-                    }
+                    /* shift to position */
+                    detail::square_permute(new_inv, _n, idx);
+
+                    /* update A_sub_t */
+                    detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
                 }
             }
 
