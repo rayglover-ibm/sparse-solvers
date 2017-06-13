@@ -287,22 +287,19 @@ namespace ss
                     blas::xcopy(new_n, inv.cbegin() + new_n, new_n + 1, u2.get(), 1);
                     blas::xscal(new_n, -(T(1) / d), u2.get(), 1);
 
-                    mat<T> F11inv({ new_n, new_n }, T(0));
-// Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
-// Py               new_inverse = F11inv - (d* np.outer(u2, u2.T))
+                    mat<T> F11inv({ new_n, new_n });
+                    F11inv = xt::view(inv, xt::range(0u, new_n), xt::range(0u, new_n));
 
-                    /* A := alpha*x*y**T + A,  */
-                    blas::xger(CblasRowMajor, new_n, new_n, d,
+// Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
+// Py               new_inverse = F11inv - (d * np.outer(u2, u2.T))
+
+                    /* A := alpha*x*y**T + A
+                       note: A - d * x == -d * x + A
+                     */
+                    blas::xger(CblasRowMajor, new_n, new_n, -d,
                         u2.get(), 1,
                         u2.get(), 1,
                         F11inv.begin(), new_n);
-
-                    /* slightly awkward.. */
-                    for (size_t r{ 0 }; r < dim<0>(F11inv); ++r) {
-                        for (size_t c{ 0 }; c < dim<1>(F11inv); ++c) {
-                            F11inv(r, c) = inv(r, c) - F11inv(r, c);
-                        }
-                    }
 
                     /* resize and assign */
                     _inv.assign(F11inv.cbegin(), F11inv.cend());
