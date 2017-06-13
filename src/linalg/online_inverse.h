@@ -101,37 +101,6 @@ namespace ss { namespace detail
             }
         }
     }
-
-    /*
-     *  Moves the row `src` within the given matrix `A` to `dest`,
-     *  with intermediate rows and shifted to account for this
-     *  movement.
-     */
-    template<typename T>
-    void shift_row(
-        mat_view<T>& A,
-        const size_t row,
-        const size_t dest_row
-        )
-    {
-        assert(dim<0>(A) > row);
-        assert(dim<0>(A) > dest_row);
-
-        if (row == dest_row) { return; }
-        const int32_t row_inc{ dest_row < row ? -1 : 1 };
-
-        /* store the src row */
-        xt::xtensor<T, 1> x = xt::view(A, row);
-
-        for (size_t r{ row }; r != dest_row; r += row_inc)
-        {
-            /* shift row upward/downward */
-            xt::view(A, r) = xt::view(A, int(r) + row_inc);
-        }
-
-        /* copy row to destination */
-        view(A, dest_row) = x;
-    }
 }}
 
 namespace ss
@@ -218,10 +187,10 @@ namespace ss
                     u2.get(), 1,
                     F11inv.begin(), _n);
 
-                /* assign F11inv */
+                /* reshape _inv */
                 {
-                    uint32_t new_n { _n + 1 };
-                    _inv.assign(new_n * new_n, 0);
+                    uint32_t new_n{ _n + 1 };
+                    _inv.resize(new_n * new_n, 0);
 
                     auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
                     {
@@ -289,30 +258,25 @@ namespace ss
             }
             else {
                 /* permute to bring the column at the end in X */
+                const mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
+
 // Py           permute_order = np.hstack((np.arange(0, pos_vCol), np.arange(pos_vCol + 1, N), pos_vCol))
 // Py           current_inverse = current_inverse[permute_order, :]
 // Py           current_inverse = current_inverse[:, permute_order]
                 {
-                    mat_view<T> new_inv = as_span<2>(_inv.data(), { _n, _n });
-
                     /* calculate column to remove */
                     size_t idx{ insertion_index(column_idx) };
 
-                    {
-                        mat_view<T> As_t{ subset_transposed() };
-                        /* shift row to the bottom */
-                        detail::shift_row(As_t, idx, dim<0>(As_t) - 1);
-                    }
+                    /* erase row from the transposed subset */
+                    auto it = _A_sub_t.begin() + (idx * dim<0>(_A));
+                    _A_sub_t.erase(it, it + dim<0>(_A));
 
                     /* shift to position */
-                    detail::square_permute(new_inv, idx, dim<1>(new_inv) - 1);
+                    detail::square_permute(inv, idx, dim<1>(inv) - 1);
                 }
 
                 uint32_t new_n{ _n - 1 };
-                mat<T> F11inv({ new_n, new_n }, T(0));
                 {
-                    const mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
-
 // Py               #update the inverse by removing the last column
 // Py               d = current_inverse[N - 1, N - 1]
                     T d{ inv(new_n, new_n) };
@@ -323,6 +287,7 @@ namespace ss
                     blas::xcopy(new_n, inv.cbegin() + new_n, new_n + 1, u2.get(), 1);
                     blas::xscal(new_n, -(T(1) / d), u2.get(), 1);
 
+                    mat<T> F11inv({ new_n, new_n }, T(0));
 // Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
 // Py               new_inverse = F11inv - (d* np.outer(u2, u2.T))
 
@@ -338,10 +303,10 @@ namespace ss
                             F11inv(r, c) = inv(r, c) - F11inv(r, c);
                         }
                     }
-                }
 
-                /* resize and assign */
-                _inv.assign(F11inv.cbegin(), F11inv.cend());
+                    /* resize and assign */
+                    _inv.assign(F11inv.cbegin(), F11inv.cend());
+                }
             }
 
             _indices[column_idx] = false;
