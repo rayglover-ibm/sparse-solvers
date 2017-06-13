@@ -30,7 +30,8 @@ namespace ss { namespace detail
      *  account for this movement.
      */
     template <typename T>
-    void square_permute(mat_view<T> A,
+    void square_permute(
+        mat_view<T> A,
         const size_t src,
         const size_t dest
         )
@@ -45,9 +46,8 @@ namespace ss { namespace detail
         }
         else if (desti > srci) {
             /* traverse forwards */
-            for (ptrdiff_t m = 0, i = 0; m < N; m++)
-            {
-                /* row swap */
+            for (ptrdiff_t m = 0, i = 0; m < N; m++) {
+                /* row rotation */
                 if (m >= srci && m < desti) {
                     for (ptrdiff_t j = i; j < i + N; j++) {
                         T tmp = ptr[j];
@@ -60,7 +60,7 @@ namespace ss { namespace detail
                 /* move to src column */
                 i += srci;
 
-                /* column swap */
+                /* column rotation */
                 for (ptrdiff_t n = srci; n < desti; n++, i++) {
                     T tmp = ptr[i];
 
@@ -74,12 +74,10 @@ namespace ss { namespace detail
         }
         else {
             /* traverse backwards */
-            for (ptrdiff_t m = N-1, i = (N * N)-1; m >= 0; m--)
-            {
-                /* row swap */
+            for (ptrdiff_t m = N-1, i = (N * N)-1; m >= 0; m--) {
+                /* row rotation */
                 if (m <= srci && m > desti) {
-                    for (ptrdiff_t j = i; j > i - N; j--)
-                    {
+                    for (ptrdiff_t j = i; j > i - N; j--) {
                         T tmp = ptr[j];
 
                         ptr[j] = ptr[j - N];
@@ -90,7 +88,7 @@ namespace ss { namespace detail
                 /* move to src column */
                 i -= (N - 1) - srci;
 
-                /* column swap */
+                /* column rotation */
                 for (ptrdiff_t n = srci; n > desti; n--, i--) {
                     T tmp = ptr[i];
 
