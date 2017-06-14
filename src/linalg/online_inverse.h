@@ -209,7 +209,8 @@ namespace ss
             }
             else {
                 /* compute the inverse as if adding a column to the end */
-                xt::xtensor<T, 1> v_col = xt::view(_A, xt::all(), column_idx);
+                xt::xtensor<T, 1> vcol = xt::view(_A, xt::all(), column_idx);
+                T vcol_dot = blas::xdot(vcol.size(), vcol.cbegin(), 1, vcol.cbegin(), 1);
 
 // Py           u1 = np.dot(matA.T, vCol)
                 auto u1 = std::make_unique<T[]>(_n);
@@ -217,34 +218,31 @@ namespace ss
                     /* current view of sub_A_t */
                     mat_view<T> At = subset_transposed();
 
-                    blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0, At.cbegin(),
-                        dim<1>(At), v_col.cbegin(), 1, 0.0,
+                    blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0,
+                        At.cbegin(), dim<1>(At),
+                        vcol.cbegin(), 1, 0.0,
                         u1.get(), 1);
                 }
 
 // Py           u2 = np.dot(current_inverse, u1)
                 auto u2 = std::make_unique<T[]>(_n);
-                blas::xgemv(CblasRowMajor, CblasNoTrans, _n, _n, 1.0, _inv.data(),
-                    _n, u1.get(), 1, 0.0, u2.get(), 1);
+                blas::xgemv(CblasRowMajor, CblasNoTrans, _n, _n, 1.0,
+                    _inv.data(), _n,
+                    u1.get(), 1, 0.0,
+                    u2.get(), 1);
 
 // Py           d = 1.0 / float(np.dot(vCol.T, vCol) - np.dot(u1.T, u2))
-                T d {1.0};
-                {
-                    T a = blas::xdot(M, v_col.cbegin(), 1, v_col.cbegin(), 1);
-                    T b = blas::xdot(_n, u1.get(), 1, u2.get(), 1);
+                T d = 1.0 / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
 
-                    d /= a - b;
-                }
+                detail::insert_last_rowcol(_inv, _n, _n, T(0));
+                uint32_t new_n{ _n + 1 };
 
 // Py           A := alpha*x*y**T + A
                 blas::xger(CblasRowMajor, _n, _n, d,
                     u2.get(), 1,
                     u2.get(), 1,
-                    _inv.data(), _n);
+                    _inv.data(), new_n);
 
-                uint32_t new_n{ _n + 1 };
-
-                detail::insert_last_rowcol(_inv, _n, _n, T(0));
                 auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
                 {
                     /* assign u3 to bottom row/right-most column */
