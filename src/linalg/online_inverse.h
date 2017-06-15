@@ -209,19 +209,25 @@ namespace ss
             }
             else {
                 /* compute the inverse as if adding a column to the end */
-                xt::xtensor<T, 1> vcol = xt::view(_A, xt::all(), column_idx);
-                T vcol_dot = blas::xdot(vcol.size(), vcol.cbegin(), 1, vcol.cbegin(), 1);
+                size_t idx{ insertion_index(column_idx) };
 
 // Py           u1 = np.dot(matA.T, vCol)
                 auto u1 = std::make_unique<T[]>(_n);
+                T vcol_dot = 0;
                 {
-                    /* current view of sub_A_t */
+                    xt::xtensor<T, 1> vcol = xt::view(_A, xt::all(), column_idx);
+                    vcol_dot = blas::xdot(vcol.size(), vcol.cbegin(), 1, vcol.cbegin(), 1);
+
+                    /* current view of A_sub_t */
                     mat_view<T> At = subset_transposed();
 
                     blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0,
                         At.cbegin(), dim<1>(At),
                         vcol.cbegin(), 1, 0.0,
                         u1.get(), 1);
+
+                    /* update A_sub_t */
+                    detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
                 }
 
 // Py           u2 = np.dot(current_inverse, u1)
@@ -244,37 +250,26 @@ namespace ss
                     _inv.data(), new_n);
 
                 auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
+                /* assign u3 to bottom row/right-most column */
+// Py           new_inverse[0:N, N] = -u3
+// Py           new_inverse[N, 0:N] = -u3.T
+                for (size_t i{ 0 }; i < _n; ++i)
                 {
-                    /* assign u3 to bottom row/right-most column */
-// Py               new_inverse[0:N, N] = -u3
-// Py               new_inverse[N, 0:N] = -u3.T
-                    for (size_t i{ 0 }; i < _n; ++i)
-                    {
-                        T u3{ -d * u2[i] };
+                    T u3{ -d * u2[i] };
 
-                        new_inv(i, _n) = u3;
-                        new_inv(_n, i) = u3;
-                    }
-
-                    /* assign u3 to bottom right */
-// Py               new_inverse[N, N] = d
-                    new_inv(_n, _n) = d;
+                    new_inv(i, _n) = u3;
+                    new_inv(_n, i) = u3;
                 }
+
+                /* assign u3 to bottom right */
+// Py           new_inverse[N, N] = d
+                new_inv(_n, _n) = d;
 
                 /* permute to get the matrix corresponding to original X */
 // Py           permute_order = np.hstack((np.arange(0, pos_vCol), N, np.arange(pos_vCol, N)))
 // Py           new_inverse = new_inverse[:, permute_order]
 // Py           new_inverse = new_inverse[permute_order, :]
-                {
-                    /* calculate destination column */
-                    size_t idx{ insertion_index(column_idx) };
-
-                    /* shift to position */
-                    detail::square_permute(new_inv, _n, idx);
-
-                    /* update A_sub_t */
-                    detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
-                }
+                detail::square_permute(new_inv, _n, idx);
             }
 
             _indices[column_idx] = true;
@@ -400,8 +395,6 @@ namespace ss
             }
             return idx;
         }
-
-
 
         /* reference matrix */
         const mat_view<T> _A;

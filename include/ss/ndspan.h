@@ -85,6 +85,12 @@ namespace ss
             xt::layout_type::row_major);
     }
 
+    template <size_t N, typename T>
+    const ndspan<typename T, N> as_span(const T* buf, std::array<size_t, N> shape)
+    {
+        return as_span<N, T>(const_cast<float*>(buf), shape);
+    }
+
     /*
      *  constructs a n-d non-owning view of a xtensor-like container
      */
