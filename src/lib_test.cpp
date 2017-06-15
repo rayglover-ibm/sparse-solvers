@@ -2,6 +2,7 @@
 
 #include <xtensor/xbuilder.hpp>
 #include <xtensor/xeval.hpp>
+#include <xtensor/xnoalias.hpp>
 
 #include <gtest/gtest.h>
 #include <array>
@@ -43,8 +44,12 @@ TEST(ndspan, xtensor_compatibility)
     auto d = xt::diag(x);
     auto&& e = xt::eval(d);
 
-    ss::ndspan<float, 2> spanA = ss::as_span(e);
+    ss::ndspan<float, 2> spanA { ss::as_span(e) };
 
     EXPECT_EQ(1, spanA(0, 0));
     EXPECT_EQ(4, spanA(3, 3));
+
+    xt::noalias(spanA) = xt::ones<float>({ 4u, 4u });
+
+    EXPECT_EQ(1, spanA(3, 3));
 }
