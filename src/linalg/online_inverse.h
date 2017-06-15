@@ -135,7 +135,7 @@ namespace ss { namespace detail
         v.resize(v.size() + N + M + 1, val);
 
         ptrdiff_t i = (M * N) - 1;
-        for (ptrdiff_t m = M-1; m > 0; m--)
+        for (ptrdiff_t m = M-1; m >= 0; m--)
         {
             /* fill last column */
             v[i + m + 1] = val;
