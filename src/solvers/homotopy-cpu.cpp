@@ -72,28 +72,17 @@ namespace ss
     }
 
     template<typename T>
-    size_t mat_subset_cols(
-        const mat<T>& A,
-        const std::vector<bool>& col_indices,
-        mat<T>& A_subset
+    size_t vec_subset(
+        const xt::xtensor<T, 1>& X,
+        const std::vector<bool>& indices,
+        xt::xtensor<T, 1>& X_subset
         )
     {
-        const size_t M = dim<0>(A_subset);
-        const size_t N = dim<1>(A_subset);
-
         size_t i{ 0 }, n{ 0 };
-        for (const bool val : col_indices) {
+        for (const bool val : indices) {
             if (val) {
-                /* copy col */
-                blas::xcopy(
-                    M /* rows */,
-                    A.cbegin() + i       /* src col */,  dim<1>(A),
-                    A_subset.begin() + n /* dest col */, N);
-
+                X_subset[n] = X[i];
                 ++n;
-
-                if (n == N)
-                    break;
             }
             ++i;
         }
@@ -129,12 +118,8 @@ namespace ss
         T* y
         )
     {
-        std::fill_n(y, mask.size(), (T)0.0);
         for (size_t i{ 0 }, off{ 0 }; i < mask.size(); i++) {
-            if (mask[i]) {
-                y[i] = x[off];
-                ++off;
-            }
+            y[i] = mask[i] ? x[off++] : T(0);
         }
     }
 
@@ -148,32 +133,34 @@ namespace ss
         T* c
         )
     {
+        size_t m = dim<0>(A), n = dim<1>(A);
+
 // Py   A_t = np.matrix.transpose(A)
-        /*
-            Port:
-
-            The transpose is not evaluated here and is instead
-            computed at the blas function when evaluating
-            'np.dot(A_t, difference)'
-        */
-
+        /* note(port): The transpose is not evaluated here and
+           is instead computed at the blas function when evaluating
+           'np.dot(A_t, difference)'
+         */
 // Py   A_x = np.dot(A, x_previous)
-        auto A_x = make_unique<T[]>(dim<0>(A));
-        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
-            dim<1>(A), x_previous, 1, 0.0, A_x.get(), 1);
+        auto A_x = make_unique<T[]>(m);
+        blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0,
+            A.cbegin(), n,
+            x_previous, 1, 0.0,
+            A_x.get(), 1);
 
 // Py   difference = np.zeros(len(y))
 // Py   for i in range(0, len(y)) :
 // Py       difference[i] = y[i] - A_x[i]
 
         /* A_x = y - A_x */
-        for (size_t i = 0; i < dim<0>(A); i++) {
+        for (size_t i = 0; i < m; i++) {
             A_x[i] = y[i] - A_x[i];
         }
 
 // Py   return np.dot(A_t, difference)
-        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
-            dim<1>(A), A_x.get() /* difference */, 1, 0.0, c, 1);
+        blas::xgemv(CblasRowMajor, CblasTrans, m, n, 1.0,
+            A.cbegin(), n,
+            A_x.get() /* difference */, 1, 0.0,
+            c, 1);
     }
 
     template<typename T>
@@ -187,15 +174,20 @@ namespace ss
         )
     {
         /* evaluate the eligible elements of transpose(A) * A * dir_vec */
+
         /* p = Ad */
         auto p = make_unique<T[]>(dim<0>(A));
-        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
-            dim<1>(A), dir_vec, 1, 0.0, p.get(), 1);
+        blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(A), dim<1>(A), 1.0,
+            A.cbegin(), dim<1>(A),
+            dir_vec, 1, 0.0,
+            p.get(), 1);
 
-        /* q = transpose(A)p */
+        /* q = transpose(A) p */
         auto q = make_unique<T[]>(dim<1>(A));
-        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0, A.cbegin(),
-            dim<1>(A), p.get(), 1, 0.0, q.get(), 1);
+        blas::xgemv(CblasRowMajor, CblasTrans, dim<0>(A), dim<1>(A), 1.0,
+            A.cbegin(), dim<1>(A),
+            p.get(), 1, 0.0,
+            q.get(), 1);
 
         /* evaluate the competing lists of terms */
         T min{ std::numeric_limits<T>::max() };
@@ -213,14 +205,14 @@ namespace ss
             else {
                 T di_left{ 1.0f - q[i] }, di_right{ 1.0f + q[i] };
 
-                if (std::abs(di_left) > 0.0) {
+                if (di_left != 0.0) {
                     T leftT = (c_inf - res_vec[i]) / di_left;
                     if (leftT > 0.0 && leftT < min) {
                         min = leftT;
                     }
                 }
 
-                if (std::abs(di_right) > 0.0) {
+                if (di_right != 0.0) {
                     T rightT = (c_inf + res_vec[i]) / di_right;
                     if (rightT > 0.0 && rightT < min) {
                         min = rightT;
@@ -243,37 +235,37 @@ namespace ss
         const mat_view<T>& A,
         const std::uint32_t max_iter,
         const T tolerance,
-        const T* y,
-        T* x
+        const ndspan<T> y,
+        ndspan<T> x
         )
     {
         assert(max_iter > 0);
-        assert(y != nullptr);
-        assert(x != nullptr);
+        assert(y.size() == dim<0>(A));
+        assert(x.size() == dim<1>(A));
 
         /* using a tolerance lt epsilon is generally not good */
         assert(tolerance >= std::numeric_limits<T>::epsilon()
             && tolerance < 1.0);
 
-        /* initialise x to a vector of zeros */
-// Py   x = np.zeros(N)
-        std::fill_n(x, dim<1>(A), (T)0.0);
+        /* initialise x */
+        xt::view(x) = T(0);
+
+        auto c         = xt::xtensor<T, 1>::from_shape({ dim<1>(A) });
+        auto c_gamma   = xt::xtensor<T, 1>::from_shape({ dim<1>(A) });
+        T    c_inf     = T(0);
+
+        auto direction = xt::xtensor<T, 1>::from_shape({ dim<1>(A) });
+        online_column_inverse<T> inv(A);
 
         /* initialise residual vector */
 // Py   c_vec = residual_vector(A, y, x)
-        mat<T> c_vec({ 1, dim<1>(A) });
-        residual_vector(A, y, x, c_vec.begin());
+        residual_vector(A, y.begin(), x.begin(), c.begin());
 
         /* initialise lambda = || c_vec || _inf */
-        // Py   c_inf = (np.linalg.norm(c_vec, np.inf))
-        T c_inf{ 0.0 };
-
-        auto direction_vec = make_unique<T[]>(dim<1>(A));
-        online_column_inverse<T> inv(A);
-
         {
             size_t c_inf_i;
-            c_inf = inf_norm(c_vec.cbegin(), dim<1>(A), &c_inf_i);
+// Py       c_inf = (np.linalg.norm(c_vec, np.inf))
+            c_inf = inf_norm(c.cbegin(), dim<1>(A), &c_inf_i);
 
             T c_vec_gamma{ c_inf };
             T subsample_direction_vector{ 0.0 };
@@ -284,56 +276,49 @@ namespace ss
             subsample_direction_vector *= inv_view(0, 0);
 
 // Py       direction_vec = helper.zero_mask(subsample_direction_vector, lambda_indices, N)
-            zero_mask(inv.indices(), &subsample_direction_vector, direction_vec.get());
+            zero_mask(inv.indices(), &subsample_direction_vector, direction.begin());
         }
 
         /* evaluate homotopy path segments in iterations */
         std::uint32_t iter{ 0u };
-        while (iter < max_iter) {
-            iter++;
+        while (iter++ < max_iter)
+        {
+            auto const gamma = find_max_gamma(A, c.cbegin(), x.begin(),
+                direction.begin(), c_inf, inv.indices());
 
-            {
-                auto const gamma = find_max_gamma(A, c_vec.cbegin(), x,
-                    direction_vec.get(), c_inf, inv.indices());
-
-                /* update inverse by inserting/removing the
+            /* update inverse by inserting/removing the
                 respective index from the inverse */
-                inv.flip(gamma.second);
+            inv.flip(gamma.second);
 
-                /* update x */
-                for (size_t i{ 0 }; i < dim<1>(A); i++) {
-                    x[i] += gamma.first * direction_vec[i];
-                }
-            }
+            /* update x */
+            xt::view(x) += gamma.first * direction;
 
             /* update residual vector */
 // Py       c_vec = residual_vector(A, y, x)
-            residual_vector(A, y, x, c_vec.begin());
+            residual_vector(A, y.begin(), x.begin(), c.begin());
 
             /* update direction vector */
             {
-                const uint32_t N{ inv.N() };
+                const std::vector<bool>& mask = inv.indices();
 
 // Py           c_vec_gamma = helper.subset_array(c_vec, lambda_indices)
-                mat<T> c_vec_gamma({1, N});
-                mat_subset_cols(c_vec, inv.indices(), c_vec_gamma);
+                const uint32_t N = vec_subset(c, mask, c_gamma);
 
 // Py           direction_vec = np.dot(invAtA, helper.sign_vector(c_vec_gamma))
-                sign_vector(N, c_vec_gamma.cbegin(), c_vec_gamma.begin(), tolerance);
+                sign_vector(N, c_gamma.begin(), c_gamma.begin(), tolerance);
 
                 auto dir_tmp = make_unique<T[]>(N);
                 blas::xgemv(CblasRowMajor, CblasNoTrans, N, N, 1.0,
                     inv.inverse().cbegin(), N,
-                    c_vec_gamma.cbegin(), 1,
-                    0.0,
+                    c_gamma.begin(), 1, 0.0,
                     dir_tmp.get(), 1);
 
 // Py           direction_vec = helper.zero_mask(direction_vec, lambda_indices, N)
-                zero_mask(inv.indices(), dir_tmp.get(), direction_vec.get());
+                zero_mask(mask, dir_tmp.get(), direction.begin());
             }
 
             /* find lambda(i.e., infinite norm of residual vector) */
-            c_inf = inf_norm(c_vec.cbegin(), dim<1>(A));
+            c_inf = inf_norm(c.cbegin(), dim<1>(A));
 
             /* check if infinity norm of residual vector is within tolerance */
             if (c_inf < tolerance)
@@ -435,21 +420,25 @@ namespace ss
         );
 */
 
-    template <> kernelpp::variant<homotopy_report, error_code> solve_homotopy::op<compute_mode::CPU>(
+    template <> kernelpp::variant<homotopy_report, error_code>
+    solve_homotopy::op<compute_mode::CPU>(
         const float* A_,
         const std::uint32_t A_m,
         const std::uint32_t A_n,
         const std::uint32_t max_iter,
         const float tolerance,
-        const float* y,
-        float* x
+        const float* y_,
+        float* x_
         )
     {
         assert(A_m > 0
             && A_n > 0
             && A_ != nullptr);
 
-        const mat_view<float> A = ss::as_span<2, float>(const_cast<float*>(A_), { A_m, A_n });
+        const ndspan<float, 2> A = ss::as_span<2, float>(A_, { A_m, A_n });
+        const ndspan<float>    y = ss::as_span<1, float>(y_, { A_m });
+        ndspan<float>          x = ss::as_span<1, float>(x_, { A_n });
+
         return run_solver(A, max_iter, tolerance, y, x);
     }
 }
