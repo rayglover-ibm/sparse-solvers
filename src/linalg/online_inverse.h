@@ -251,7 +251,7 @@ namespace ss
 
 // Py       invAtA = 1.0 / (np.linalg.norm(A_gamma) * np.linalg.norm(A_gamma))
             T A_gamma_norm{ blas::xnrm2(M, _A_sub_t.data(), 1) };
-            T inv_at_A { (T)1.0 / (A_gamma_norm * A_gamma_norm) };
+            T inv_at_A { T(1) / (A_gamma_norm * A_gamma_norm) };
 
             _inv.push_back(inv_at_A);
         }
@@ -286,7 +286,7 @@ namespace ss
                 u2.get(), 1);
 
 // Py       d = 1.0 / float(np.dot(vCol.T, vCol) - np.dot(u1.T, u2))
-            T d = 1.0 / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
+            T d = T(1) / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
 
             detail::insert_last_rowcol(_inv, _n, _n, T(0));
             uint32_t new_n{ _n + 1 };
