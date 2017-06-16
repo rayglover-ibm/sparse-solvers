@@ -269,11 +269,11 @@ namespace ss
 
             T c_vec_gamma{ c_inf };
             T subsample_direction_vector{ 0.0 };
-            auto inv_view = inv.insert((uint32_t)c_inf_i);
+            inv.insert((uint32_t)c_inf_i);
 
 // Py       subsample_direction_vector = invAtA * helper.sign_vector(c_vec_gamma)
             sign_vector(1, &c_vec_gamma, &subsample_direction_vector, tolerance);
-            subsample_direction_vector *= inv_view(0, 0);
+            subsample_direction_vector *= inv.inverse()(0, 0);
 
 // Py       direction_vec = helper.zero_mask(subsample_direction_vector, lambda_indices, N)
             zero_mask(inv.indices(), &subsample_direction_vector, direction.begin());

@@ -22,10 +22,70 @@ limitations under the License.  */
 #include <memory>
 #include <cassert>
 
+namespace ss
+{
+    /*  Given a non-owning reference to a matrix `A`, maintains
+     *  the inverse of column-wise subset of `A`.
+     *
+     *  Refer to ./docs/algorithms/online-matrix-inverse for more information
+     */
+    template <typename T>
+    class online_column_inverse
+    {
+      public:
+        online_column_inverse(const mat_view<T>& A);
+
+        /* returns a view of the inverse */
+        const mat_view<T> inverse();
+
+        /*  Inserts a column of `A` in to the inverse. Returns a
+         *  view of the updated inverse.
+         */
+        void insert(const uint32_t column_idx);
+
+        /*  Removes a column of `A` from the inverse. Returns a
+         *  view of the updated inverse.
+         */
+        void remove(uint32_t column_idx);
+
+        /*  Inverts the membership of the column at the given
+         *  column index in the inverse. Returns a view of the
+         *  updated inverse.
+         */
+        void flip(const uint32_t index);
+
+        /* returns the indices of `A` in the inverse */
+        const std::vector<bool>& indices() const { return _indices; }
+
+        /* returns the size of the inverse */
+        const uint32_t N() { return N; }
+
+      private:
+        mat_view<T> subset_transposed();
+
+        /*  Returns the index of the column in the inverse currently
+         *  corresponding to the given column index of _A
+         */
+        size_t insertion_index(uint32_t column_idx);
+
+        /* reference matrix */
+        const mat_view<T> _A;
+        /* A_gamma transposed */
+        std::vector<T> _A_sub_t;
+        /* the inverse of A_gamma */
+        std::vector<T> _inv;
+        /* number of columns of _A corresponding to the inverse */
+        uint32_t _n;
+        /* column indices of _A corresponding to the inverse */
+        std::vector<bool> _indices;
+    };
+}
+
+/* Implementation ---------------------------------------------------------- */
+
 namespace ss { namespace detail
 {
-    /*
-     *  Permutes the given matrix `A` such that the row and column `src`
+    /*  Permutes the given matrix `A` such that the row and column `src`
      *  is moved to `dest`, with intermediate rows and columns shifted to
      *  account for this movement.
      */
@@ -164,247 +224,204 @@ namespace ss { namespace detail
 
 namespace ss
 {
-    /*
-     *  Given a non-owning reference to a matrix `A`, maintains
-     *  the inverse of column-wise subset of `A`.
-     *
-     *  Refer to ./docs/algorithms/online-matrix-inverse for more information
-     */
     template <typename T>
-    class online_column_inverse
+    online_column_inverse<T>::online_column_inverse(const mat_view<T>& A)
+        : _A{ A }
+        , _indices(dim<1>(A), false)
+        , _n{ 0 }
     {
-      public:
-        online_column_inverse(const mat_view<T>& A)
-            : _A{ A }
-            , _indices(dim<1>(A), false)
-            , _n{ 0 }
-        {
-            _inv.reserve(10 * 10);
-            _A_sub_t.reserve(10 * dim<0>(A));
+        _inv.reserve(10 * 10);
+        _A_sub_t.reserve(10 * dim<0>(A));
+    }
+
+    template <typename T>
+    void online_column_inverse<T>::insert(const uint32_t column_idx)
+    {
+        assert(column_idx < dim<1>(_A));
+
+        if (_indices[column_idx]) {
+            return;
         }
 
-        /*
-         *  Inserts a column of `A` in to the inverse. Returns a
-         *  view of the updated inverse.
-         */
-        const mat_view<T> insert(const uint32_t column_idx)
-        {
-            assert(column_idx < dim<1>(_A));
+        size_t const M = dim<0>(_A);
+        if (_n == 0) {
+            /* initialize */
+// Py       A_gamma = helper.subset_array(A, lambda_indices)
+            detail::insert_col_into_row(_A_sub_t, _A, column_idx, 0);
 
-            if (_indices[column_idx]) {
-                return inverse();
+// Py       invAtA = 1.0 / (np.linalg.norm(A_gamma) * np.linalg.norm(A_gamma))
+            T A_gamma_norm{ blas::xnrm2(M, _A_sub_t.data(), 1) };
+            T inv_at_A { (T)1.0 / (A_gamma_norm * A_gamma_norm) };
+
+            _inv.push_back(inv_at_A);
+        }
+        else {
+            /* compute the inverse as if adding a column to the end */
+            size_t idx{ insertion_index(column_idx) };
+
+// Py       u1 = np.dot(matA.T, vCol)
+            auto u1 = std::make_unique<T[]>(_n);
+            T vcol_dot = 0;
+            {
+                xt::xtensor<T, 1> vcol = xt::view(_A, xt::all(), column_idx);
+                vcol_dot = blas::xdot(vcol.size(), vcol.cbegin(), 1, vcol.cbegin(), 1);
+
+                /* current view of A_sub_t */
+                mat_view<T> At = subset_transposed();
+
+                blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0,
+                    At.cbegin(), dim<1>(At),
+                    vcol.cbegin(), 1, 0.0,
+                    u1.get(), 1);
+
+                /* update A_sub_t */
+                detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
             }
 
-            size_t const M = dim<0>(_A);
-            if (_n == 0) {
-                /* initialize */
-// Py           A_gamma = helper.subset_array(A, lambda_indices)
-                detail::insert_col_into_row(_A_sub_t, _A, column_idx, 0);
+// Py       u2 = np.dot(current_inverse, u1)
+            auto u2 = std::make_unique<T[]>(_n);
+            blas::xgemv(CblasRowMajor, CblasNoTrans, _n, _n, 1.0,
+                _inv.data(), _n,
+                u1.get(), 1, 0.0,
+                u2.get(), 1);
 
-// Py           invAtA = 1.0 / (np.linalg.norm(A_gamma) * np.linalg.norm(A_gamma))
-                T A_gamma_norm{ blas::xnrm2(M, _A_sub_t.data(), 1) };
-                T inv_at_A { (T)1.0 / (A_gamma_norm * A_gamma_norm) };
+// Py       d = 1.0 / float(np.dot(vCol.T, vCol) - np.dot(u1.T, u2))
+            T d = 1.0 / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
 
-                _inv.push_back(inv_at_A);
+            detail::insert_last_rowcol(_inv, _n, _n, T(0));
+            uint32_t new_n{ _n + 1 };
+
+// Py       A := alpha*x*y**T + A
+            blas::xger(CblasRowMajor, _n, _n, d,
+                u2.get(), 1,
+                u2.get(), 1,
+                _inv.data(), new_n);
+
+            auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
+            /* assign u3 to bottom row/right-most column */
+// Py       new_inverse[0:N, N] = -u3
+// Py       new_inverse[N, 0:N] = -u3.T
+            for (size_t i{ 0 }; i < _n; ++i)
+            {
+                T u3{ -d * u2[i] };
+
+                new_inv(i, _n) = u3;
+                new_inv(_n, i) = u3;
             }
-            else {
-                /* compute the inverse as if adding a column to the end */
+
+            /* assign u3 to bottom right */
+// Py       new_inverse[N, N] = d
+            new_inv(_n, _n) = d;
+
+            /* permute to get the matrix corresponding to original X */
+// Py       permute_order = np.hstack((np.arange(0, pos_vCol), N, np.arange(pos_vCol, N)))
+// Py       new_inverse = new_inverse[:, permute_order]
+// Py       new_inverse = new_inverse[permute_order, :]
+            detail::square_permute(new_inv, _n, idx);
+        }
+
+        _indices[column_idx] = true;
+        _n++;
+    }
+
+    template <typename T>
+    void online_column_inverse<T>::remove(uint32_t column_idx)
+    {
+        assert(_n > 0);
+        assert(column_idx < dim<1>(_A));
+
+        if (!_indices[column_idx]) {
+            return;
+        }
+
+        if (_n == 1) {
+            _inv.clear();
+            _A_sub_t.clear();
+        }
+        else {
+            /* permute to bring the column at the end in X */
+            mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
+
+// Py       permute_order = np.hstack((np.arange(0, pos_vCol), np.arange(pos_vCol + 1, N), pos_vCol))
+// Py       current_inverse = current_inverse[permute_order, :]
+// Py       current_inverse = current_inverse[:, permute_order]
+            {
+                /* calculate column to remove */
                 size_t idx{ insertion_index(column_idx) };
 
-// Py           u1 = np.dot(matA.T, vCol)
-                auto u1 = std::make_unique<T[]>(_n);
-                T vcol_dot = 0;
-                {
-                    xt::xtensor<T, 1> vcol = xt::view(_A, xt::all(), column_idx);
-                    vcol_dot = blas::xdot(vcol.size(), vcol.cbegin(), 1, vcol.cbegin(), 1);
+                /* erase row from the transposed subset */
+                auto it = _A_sub_t.begin() + (idx * dim<0>(_A));
+                _A_sub_t.erase(it, it + dim<0>(_A));
 
-                    /* current view of A_sub_t */
-                    mat_view<T> At = subset_transposed();
-
-                    blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0,
-                        At.cbegin(), dim<1>(At),
-                        vcol.cbegin(), 1, 0.0,
-                        u1.get(), 1);
-
-                    /* update A_sub_t */
-                    detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
-                }
-
-// Py           u2 = np.dot(current_inverse, u1)
-                auto u2 = std::make_unique<T[]>(_n);
-                blas::xgemv(CblasRowMajor, CblasNoTrans, _n, _n, 1.0,
-                    _inv.data(), _n,
-                    u1.get(), 1, 0.0,
-                    u2.get(), 1);
-
-// Py           d = 1.0 / float(np.dot(vCol.T, vCol) - np.dot(u1.T, u2))
-                T d = 1.0 / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
-
-                detail::insert_last_rowcol(_inv, _n, _n, T(0));
-                uint32_t new_n{ _n + 1 };
-
-// Py           A := alpha*x*y**T + A
-                blas::xger(CblasRowMajor, _n, _n, d,
-                    u2.get(), 1,
-                    u2.get(), 1,
-                    _inv.data(), new_n);
-
-                auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
-                /* assign u3 to bottom row/right-most column */
-// Py           new_inverse[0:N, N] = -u3
-// Py           new_inverse[N, 0:N] = -u3.T
-                for (size_t i{ 0 }; i < _n; ++i)
-                {
-                    T u3{ -d * u2[i] };
-
-                    new_inv(i, _n) = u3;
-                    new_inv(_n, i) = u3;
-                }
-
-                /* assign u3 to bottom right */
-// Py           new_inverse[N, N] = d
-                new_inv(_n, _n) = d;
-
-                /* permute to get the matrix corresponding to original X */
-// Py           permute_order = np.hstack((np.arange(0, pos_vCol), N, np.arange(pos_vCol, N)))
-// Py           new_inverse = new_inverse[:, permute_order]
-// Py           new_inverse = new_inverse[permute_order, :]
-                detail::square_permute(new_inv, _n, idx);
+                /* shift to last column */
+                detail::square_permute(inv, idx, dim<1>(inv) - 1);
             }
 
-            _indices[column_idx] = true;
-            _n++;
+            /* update the inverse by removing the last column */
+            {
+                uint32_t new_n{ _n - 1 };
 
-            return inverse();
-        }
+// Py           d = current_inverse[N - 1, N - 1]
+                T d{ inv(new_n, new_n) };
 
-        /*
-         *  Removes a column of `A` from the inverse. Returns a
-         *  view of the updated inverse.
-         */
-        const mat_view<T> remove(uint32_t column_idx)
-        {
-            assert(_n > 0);
-            assert(column_idx < dim<1>(_A));
+// Py           u2 = -(1.0 / d) * current_inverse[0:N - 1, N - 1]
+                blas::xscal(new_n, -(T(1) / d), &inv(0, new_n), _n);
 
-            if (!_indices[column_idx]) {
-                return inverse();
+// Py           F11inv = current_inverse[0:N - 1, 0 : N - 1]
+// Py           new_inverse = F11inv - (d * np.outer(u2, u2.T))
+
+                /* A := alpha*x*y**T + A
+                    note: A - d * x == -d * x + A
+                    */
+                blas::xger(CblasRowMajor, new_n, new_n, -d,
+                    &inv(0, new_n), _n,
+                    &inv(0, new_n), _n,
+                    &inv(0, 0),     _n);
+
+                /* resize and assign */
+                detail::erase_last_rowcol(_inv, _n, _n);
             }
+        }
 
-            if (_n == 1) {
-                _inv.clear();
-                _A_sub_t.clear();
+        _indices[column_idx] = false;
+        _n--;
+    }
+
+    template <typename T>
+    void online_column_inverse<T>::flip(const uint32_t index)
+    {
+        assert(index < _indices.size());
+        if (_indices[index])
+            remove(index);
+        else
+            insert(index);
+    }
+
+    template <typename T>
+    const mat_view<T> online_column_inverse<T>::inverse()
+    {
+        assert(_inv.size() >= _n * _n);
+        return as_span<2>(_inv.data(), { _n, _n });
+    }
+
+    template <typename T>
+    size_t online_column_inverse<T>::insertion_index(uint32_t column_idx)
+    {
+        assert(column_idx < dim<1>(_A));
+
+        size_t idx{ 0u };
+        for (uint32_t i{ 0u }; i < column_idx; ++i) {
+            if (_indices[i]) {
+                idx++;
             }
-            else {
-                /* permute to bring the column at the end in X */
-                mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
-
-// Py           permute_order = np.hstack((np.arange(0, pos_vCol), np.arange(pos_vCol + 1, N), pos_vCol))
-// Py           current_inverse = current_inverse[permute_order, :]
-// Py           current_inverse = current_inverse[:, permute_order]
-                {
-                    /* calculate column to remove */
-                    size_t idx{ insertion_index(column_idx) };
-
-                    /* erase row from the transposed subset */
-                    auto it = _A_sub_t.begin() + (idx * dim<0>(_A));
-                    _A_sub_t.erase(it, it + dim<0>(_A));
-
-                    /* shift to last column */
-                    detail::square_permute(inv, idx, dim<1>(inv) - 1);
-                }
-
-                /* update the inverse by removing the last column */
-                {
-                    uint32_t new_n{ _n - 1 };
-
-// Py               d = current_inverse[N - 1, N - 1]
-                    T d{ inv(new_n, new_n) };
-
-// Py               u2 = -(1.0 / d) * current_inverse[0:N - 1, N - 1]
-                    blas::xscal(new_n, -(T(1) / d), &inv(0, new_n), _n);
-
-// Py               F11inv = current_inverse[0:N - 1, 0 : N - 1]
-// Py               new_inverse = F11inv - (d * np.outer(u2, u2.T))
-
-                    /* A := alpha*x*y**T + A
-                       note: A - d * x == -d * x + A
-                     */
-                    blas::xger(CblasRowMajor, new_n, new_n, -d,
-                        &inv(0, new_n), _n,
-                        &inv(0, new_n), _n,
-                        &inv(0, 0),     _n);
-
-                    /* resize and assign */
-                    detail::erase_last_rowcol(_inv, _n, _n);
-                }
-            }
-
-            _indices[column_idx] = false;
-            _n--;
-
-            return inverse();
         }
+        return idx;
+    }
 
-        /*
-         *  Inverts the membership of the column at the given
-         *  column index in the inverse. Returns a view of the
-         *  updated inverse.
-         */
-        const mat_view<T> flip(const uint32_t index) {
-            assert(index < _indices.size());
-            if (_indices[index])
-                return remove(index);
-            else
-                return insert(index);
-        }
-
-        const std::vector<bool>& indices() const {
-            return _indices;
-        }
-
-        const uint32_t N() { return _n; }
-
-        /* returns a view of the inverse */
-        const mat_view<T> inverse()
-        {
-            assert(_inv.size() >= _n * _n);
-            return as_span<2>(_inv.data(), { _n, _n });
-        }
-
-      private:
-        mat_view<T> subset_transposed()
-        {
-            assert(_A_sub_t.size() >= _n * dim<0>(_A));
-            return as_span<2>(_A_sub_t.data(), { _n, dim<0>(_A) });
-        }
-
-        /*
-            Returns the index of the column in the inverse currently
-            corresponding to the given column index of _A
-         */
-        size_t insertion_index(uint32_t column_idx)
-        {
-            assert(column_idx < dim<1>(_A));
-
-            size_t idx{ 0u };
-            for (uint32_t i{ 0u }; i < column_idx; ++i) {
-                if (_indices[i]) {
-                    idx++;
-                }
-            }
-            return idx;
-        }
-
-        /* reference matrix */
-        const mat_view<T> _A;
-        /* A_gamma transposed */
-        std::vector<T> _A_sub_t;
-        /* the inverse of A_gamma */
-        std::vector<T> _inv;
-        /* number of columns of _A corresponding to the inverse */
-        uint32_t _n;
-        /* column indices of _A corresponding to the inverse */
-        std::vector<bool> _indices;
-    };
+    template <typename T>
+    mat_view<T> online_column_inverse<T>::subset_transposed()
+    {
+        assert(_A_sub_t.size() >= _n * dim<0>(_A));
+        return as_span<2>(_A_sub_t.data(), { _n, dim<0>(_A) });
+    }
 }
