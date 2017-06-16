@@ -28,13 +28,11 @@ namespace ss
         compute_mode::CPU)
     {
         template <compute_mode> static kernelpp::variant<homotopy_report, error_code> op(
-            const float* A,
-            const uint32_t m,
-            const uint32_t n,
-            const uint32_t max_iter,
-            const float tolerance,
-            const float* y,
-            float* x
+            const ndspan<float, 2> A,
+            const ndspan<float> y,
+            float tolerance,
+            std::uint32_t max_iterations,
+            ndspan<float> x
             );
     };
 }

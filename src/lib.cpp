@@ -34,11 +34,6 @@ namespace ss
               uint32_t         max_iterations,
               ndspan<float>    x)
     {
-        return kernelpp::run<solve_homotopy>(
-            A.raw_data(), A.shape()[0], A.shape()[1],
-            max_iterations,
-            tolerance,
-            y.raw_data(),
-            x.raw_data());
+        return kernelpp::run<solve_homotopy>(A, y, tolerance, max_iterations, x);
     }
 }

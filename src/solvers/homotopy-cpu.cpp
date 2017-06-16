@@ -34,7 +34,6 @@ namespace ss
     */
     using std::make_unique;
 
-#pragma region helpers
     template<typename T>
     void columnwise_sum(
         mat_view<T>& A,
@@ -122,8 +121,6 @@ namespace ss
             y[i] = mask[i] ? x[off++] : T(0);
         }
     }
-
-#pragma endregion
 
     template<typename T>
     void residual_vector(
@@ -422,23 +419,12 @@ namespace ss
 
     template <> kernelpp::variant<homotopy_report, error_code>
     solve_homotopy::op<compute_mode::CPU>(
-        const float* A_,
-        const std::uint32_t A_m,
-        const std::uint32_t A_n,
-        const std::uint32_t max_iter,
-        const float tolerance,
-        const float* y_,
-        float* x_
-        )
+        const ndspan<float, 2> A,
+        const ndspan<float> y,
+        float tolerance,
+        std::uint32_t max_iterations,
+        ndspan<float> x)
     {
-        assert(A_m > 0
-            && A_n > 0
-            && A_ != nullptr);
-
-        const ndspan<float, 2> A = ss::as_span<2, float>(A_, { A_m, A_n });
-        const ndspan<float>    y = ss::as_span<1, float>(y_, { A_m });
-        ndspan<float>          x = ss::as_span<1, float>(x_, { A_n });
-
-        return run_solver(A, max_iter, tolerance, y, x);
+        return run_solver<float>(A, max_iterations, tolerance, y, x);
     }
 }
