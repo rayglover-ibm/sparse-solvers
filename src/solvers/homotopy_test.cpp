@@ -13,7 +13,7 @@ using ss::as_span;
 namespace
 {
     void check_report(kernelpp::maybe<ss::homotopy_report>& result,
-        float tolerance, int max_iterations
+        float tolerance, uint32_t max_iterations
         )
     {
         EXPECT_TRUE(result.is<ss::homotopy_report>());
