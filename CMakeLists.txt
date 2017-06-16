@@ -74,6 +74,7 @@ if (${ss}_WITH_TESTS)
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
+    target_compile_definitions ("${ss}_test" PUBLIC XTENSOR_ENABLE_ASSERT=ON)
     copy_target_files (${ss}_test ${ss})
 
     enable_testing ()
