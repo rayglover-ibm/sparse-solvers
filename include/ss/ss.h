@@ -37,15 +37,12 @@ namespace ss
         Uses the homotopy method to solve the equation
         min || x || _1  subject to A x = y
 
-                A : sensing matrix of row-major order
-                m : the number of rows in matrix A
-                n : the number of columns in matrix A
-         max_iter : maximum number of iterations
-        tolerance : sparsity budget
-                y : signal vector of length m
-
-                x : the output sparse representation vector
-                    of length n
+                     A : sensing matrix of row-major order
+                     y : signal vector of length m
+        max_iterations : maximum number of iterations
+             tolerance : sparsity budget
+                     x : the output sparse representation vector
+                         of length n
 
         returns : an instance of homotopy_report, or an error
     */
