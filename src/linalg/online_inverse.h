@@ -41,24 +41,24 @@ namespace ss
         /*  Inserts a column of `A` in to the inverse. Returns a
          *  view of the updated inverse.
          */
-        void insert(const uint32_t column_idx);
+        void insert(const size_t column_idx);
 
         /*  Removes a column of `A` from the inverse. Returns a
          *  view of the updated inverse.
          */
-        void remove(uint32_t column_idx);
+        void remove(size_t column_idx);
 
         /*  Inverts the membership of the column at the given
          *  column index in the inverse. Returns a view of the
          *  updated inverse.
          */
-        void flip(const uint32_t index);
+        void flip(const size_t index);
 
         /* returns the indices of `A` in the inverse */
         const std::vector<bool>& indices() const { return _indices; }
 
         /* returns the size of the inverse */
-        const uint32_t N() { return N; }
+        const size_t N() { return N; }
 
       private:
         mat_view<T> subset_transposed();
@@ -66,7 +66,7 @@ namespace ss
         /*  Returns the index of the column in the inverse currently
          *  corresponding to the given column index of _A
          */
-        size_t insertion_index(uint32_t column_idx);
+        size_t insertion_index(size_t column_idx);
 
         /* reference matrix */
         const mat_view<T> _A;
@@ -75,7 +75,7 @@ namespace ss
         /* the inverse of A_gamma */
         std::vector<T> _inv;
         /* number of columns of _A corresponding to the inverse */
-        uint32_t _n;
+        size_t _n;
         /* column indices of _A corresponding to the inverse */
         std::vector<bool> _indices;
     };
@@ -235,7 +235,7 @@ namespace ss
     }
 
     template <typename T>
-    void online_column_inverse<T>::insert(const uint32_t column_idx)
+    void online_column_inverse<T>::insert(const size_t column_idx)
     {
         assert(column_idx < dim<1>(_A));
 
@@ -289,7 +289,7 @@ namespace ss
             T d = T(1) / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
 
             detail::insert_last_rowcol(_inv, _n, _n, T(0));
-            uint32_t new_n{ _n + 1 };
+            size_t new_n{ _n + 1 };
 
 // Py       A := alpha*x*y**T + A
             blas::xger(CblasRowMajor, _n, _n, d,
@@ -325,7 +325,7 @@ namespace ss
     }
 
     template <typename T>
-    void online_column_inverse<T>::remove(uint32_t column_idx)
+    void online_column_inverse<T>::remove(size_t column_idx)
     {
         assert(_n > 0);
         assert(column_idx < dim<1>(_A));
@@ -359,7 +359,7 @@ namespace ss
 
             /* update the inverse by removing the last column */
             {
-                uint32_t new_n{ _n - 1 };
+                size_t new_n{ _n - 1 };
 
 // Py           d = current_inverse[N - 1, N - 1]
                 T d{ inv(new_n, new_n) };
@@ -388,7 +388,7 @@ namespace ss
     }
 
     template <typename T>
-    void online_column_inverse<T>::flip(const uint32_t index)
+    void online_column_inverse<T>::flip(const size_t index)
     {
         assert(index < _indices.size());
         if (_indices[index])
@@ -405,7 +405,7 @@ namespace ss
     }
 
     template <typename T>
-    size_t online_column_inverse<T>::insertion_index(uint32_t column_idx)
+    size_t online_column_inverse<T>::insertion_index(size_t column_idx)
     {
         assert(column_idx < dim<1>(_A));
 
