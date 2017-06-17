@@ -65,7 +65,7 @@ namespace ss
      *  constructs a 1-d non-owning view of an (ptr, len) representation.
      */
     template <typename T>
-    ndspan<typename T, 1> as_span(T* buf, size_t len)
+    ndspan<T, 1> as_span(T* buf, size_t len)
     {
         return xt::xadapt(buf, len, xt::no_ownership(), std::array<size_t, 1>{ len },
             xt::layout_type::row_major);
@@ -76,7 +76,7 @@ namespace ss
      *  of an (ptr, len) representation.
      */
     template <size_t N, typename T>
-    ndspan<typename T, N> as_span(T* buf, std::array<size_t, N> shape)
+    ndspan<T, N> as_span(T* buf, std::array<size_t, N> shape)
     {
         size_t len = shape[0];
         for (size_t j=1; j < N; j++) len *= shape[j];
@@ -86,7 +86,7 @@ namespace ss
     }
 
     template <size_t N, typename T>
-    const ndspan<typename T, N> as_span(const T* buf, std::array<size_t, N> shape)
+    const ndspan<T, N> as_span(const T* buf, std::array<size_t, N> shape)
     {
         return as_span<N, T>(const_cast<float*>(buf), shape);
     }

@@ -304,7 +304,7 @@ namespace ss
         }
         else {
             /* matrix */
-            auto sums = make_unique<T[]>(dim<1>(A));
+            auto sums = std::make_unique<T[]>(dim<1>(A));
             columnwise_sum(A, sums.get());
 
             for (size_t i{ 0 }; i < dim<1>(A); ++i) {
