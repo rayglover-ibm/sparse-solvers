@@ -98,7 +98,7 @@ TEST(homotopy, noisy_patterns)
 {
     const uint32_t M = 25, N = 100;
     const int PATTERN = 3;
-    const float TOL = 0.1f;
+    const float TOL = 0.13f;
 
     /* make some noise */
     xtensor<float, 2> haystack = xt::random::randn({ M, N }, .5f, .1f);
