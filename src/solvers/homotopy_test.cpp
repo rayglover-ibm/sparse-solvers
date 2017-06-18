@@ -98,7 +98,7 @@ TEST(homotopy, noisy_patterns)
 {
     const uint32_t M = 25, N = 100;
     const int PATTERN = 3;
-    const float TOL = 0.13f;
+    const float TOL = 0.115f;
 
     /* make some noise */
     xtensor<float, 2> haystack = xt::random::randn({ M, N }, .5f, .1f);
@@ -127,7 +127,7 @@ TEST(homotopy, noisy_patterns)
             xtensor<float, 1> expect = xt::zeros<float>({ N });
             expect[n] = 1.0;
 
-            if (!xt::isclose(x, expect, 1.0 /* relative */, 0.1 /* absolute */)()) {
+            if (!xt::isclose(x, expect, 1.0 /* relative */, TOL /* absolute */)()) {
                 std::cout << "Solution for signal " << n << " failed a sparisty test:\n" << x << "\n\n";
                 failures++;
             }
