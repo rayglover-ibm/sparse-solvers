@@ -65,6 +65,10 @@ endif ()
 
 # -- main tests
 if (${ss}_WITH_TESTS)
+    if (NOT TARGET gtest)
+        # note: google test should be enabled by default by kernelpp
+        message (SEND_ERROR "Tests could not be built: Google Test not configured correctly.")
+    endif ()
     add_executable ("${ss}_test"
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"
