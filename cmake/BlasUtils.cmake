@@ -1,8 +1,5 @@
-include (DownloadProject)
-
 define_property(TARGET
-    PROPERTY
-    REQUIRED_RUNTIME_FILES
+    PROPERTY REQUIRED_RUNTIME_FILES
     BRIEF_DOCS "Runtime taget files required for this target"
     FULL_DOCS "Runtime taget files required for this target"
 )
@@ -24,18 +21,18 @@ function (copy_target_files dest_target target)
 endfunction ()
 
 macro (blas_init target pkg vendor)
-    set (downloads_root "https://github.com/rayglover-ibm/openblas-ci/releases/download")
-    set (version "v0.2.19")
+    file (DOWNLOAD
+        "https://raw.githubusercontent.com/rayglover-ibm/openblas-ci/master/OpenBLASBootstrap.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/tmp.OpenBLASBootstrap.cmake"
+    )
+    include ("${CMAKE_CURRENT_BINARY_DIR}/tmp.OpenBLASBootstrap.cmake")
+    OpenBLAS_find_archive (
+        RELEASE_NAME "LATEST" OS ${CMAKE_SYSTEM_NAME} BUILD_URL url
+    )
+    OpenBLAS_init (
+        BUILD_URL "${url}" PROJ OpenBLAS
+    )
 
-    download_project (
-        PROJ OpenBLAS
-        URL "${downloads_root}/${version}/${CMAKE_SYSTEM_NAME}.tar.gz"
-        UPDATE_DISCONNECTED 1
-    )
-    find_package (OpenBLAS REQUIRED
-        PATHS "${OpenBLAS_SOURCE_DIR}"
-    )
-    
     # OpenBLAS library needs to be copied to binary directory
     append_target_files (${target} OpenBLAS)
     

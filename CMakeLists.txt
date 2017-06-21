@@ -18,7 +18,6 @@ option ("${ss}_WITH_PYTHON"  "Enable ${ss} python binding" OFF)
 
 list (APPEND CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_LIST_DIR}/cmake"
-    "${CMAKE_CURRENT_LIST_DIR}/third_party/DownloadProject"
 )
 
 # dependencies
