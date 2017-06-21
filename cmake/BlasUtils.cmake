@@ -21,17 +21,18 @@ function (copy_target_files dest_target target)
 endfunction ()
 
 macro (blas_init target pkg vendor)
-    file (DOWNLOAD
-        "https://raw.githubusercontent.com/rayglover-ibm/openblas-ci/master/OpenBLASBootstrap.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/tmp.OpenBLASBootstrap.cmake"
-    )
-    include ("${CMAKE_CURRENT_BINARY_DIR}/tmp.OpenBLASBootstrap.cmake")
-    OpenBLAS_find_archive (
-        RELEASE_NAME "LATEST" OS ${CMAKE_SYSTEM_NAME} BUILD_URL url
-    )
-    OpenBLAS_init (
-        BUILD_URL "${url}" PROJ OpenBLAS
-    )
+    # download OpenBLAS bootsrap
+    set (bootstrap "${CMAKE_CURRENT_BINARY_DIR}/tmp.OpenBLASBootstrap.cmake")
+    if (NOT EXISTS "${bootstrap}")
+        file (DOWNLOAD
+            "https://raw.githubusercontent.com/rayglover-ibm/openblas-ci/master/OpenBLASBootstrap.cmake"
+            "${bootstrap}")
+    endif ()
+
+    # Get the latest OpenBLAS build
+    include ("${bootstrap}")
+    OpenBLAS_find_archive (BUILD_URL url)
+    OpenBLAS_init (BUILD_URL "${url}" PROJ OpenBLAS)
 
     # OpenBLAS library needs to be copied to binary directory
     append_target_files (${target} OpenBLAS)
