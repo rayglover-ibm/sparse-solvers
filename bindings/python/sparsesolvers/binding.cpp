@@ -12,15 +12,15 @@ namespace py = pybind11;
 namespace ss
 {
     template <size_t N, typename T>
-    inline ss::ndspan<T, N> as_span(const py::buffer_info& info)
+    inline ss::ndspan<T, N> as_span(py::array_t<T>& arr)
     {
-        if (info.ndim != N) throw std::runtime_error(
-            "Unexpected number of dimensions. Expected " + std::to_string(N) + " but got " + std::to_string(info.ndim));
+        if (arr.ndim() != N) throw std::runtime_error(
+            "Unexpected number of dimensions. Expected " + std::to_string(N) + " but got " + std::to_string(arr.ndim()));
 
         std::array<size_t, N> shape;
-        for (size_t d = 0; d < N; d++) shape[d] = info.shape[d];
+        for (size_t d = 0; d < N; d++) shape[d] = arr.shape(d);
 
-        return ss::as_span<N, T>(reinterpret_cast<T*>(info.ptr), shape);
+        return ss::as_span<N, T>(arr.mutable_data(), shape);
     }
 }
 
@@ -49,36 +49,21 @@ namespace util
     }
 }
 
-PYBIND11_PLUGIN(binding)
+namespace builders
 {
-    py::module m("binding", "python binding example");
-
-    m.def("version", &::util::get_version, LIB_NAME " version");
-
-    py::class_<ss::homotopy_report>(m, "HomotopyReport")
-        .def(py::init())
-        .def_readwrite("iter", &ss::homotopy_report::iter)
-        .def_readwrite("solution_error", &ss::homotopy_report::solution_error);
-
-    py::class_<ss::homotopy>(m, "Homotopy")
-        .def(py::init())
-        .def("solve",
+    template <typename T, typename Solver>
+    void solve(py::class_<Solver>& solver)
+    {
+        solver.def("solve",
             [](ss::homotopy& solver,
-               py::array_t<float> A,
-               py::array_t<float> b,
-               float tolerance = std::numeric_limits<float>::epsilon() * 10,
-               uint32_t max_iterations = 100)
+               py::array_t<T> A,
+               py::array_t<T> b,
+               T tol = std::numeric_limits<T>::epsilon() * 10,
+               uint32_t maxiter = 100)
             {
-                auto bufA = A.request(),
-                     bufb = b.request();
-
-                auto x = py::array_t<float>(bufA.shape[1]);
+                auto x = py::array_t<T>(A.shape(1));
                 auto result = solver.solve(
-                    ss::as_span<2, float>(bufA),
-                    ss::as_span<1, float>(bufb),
-                    tolerance,
-                    max_iterations,
-                    ss::as_span<1, float>(x.request()));
+                    ss::as_span<2>(A), ss::as_span<1>(b), tol, maxiter, ss::as_span<1>(x));
 
                 util::try_throw(result);
                 ss::homotopy_report hr = result.get<ss::homotopy_report>();
@@ -87,10 +72,28 @@ PYBIND11_PLUGIN(binding)
             },
 
             "Execute the solver on the given inputs.",
-            py::arg("A"),
-            py::arg("b"),
-            py::arg("tolerance") = std::numeric_limits<float>::epsilon() * 10,
+            py::arg("A").noconvert(),
+            py::arg("b").noconvert(),
+            py::arg("tolerance") = std::numeric_limits<T>::epsilon() * 10,
             py::arg("max_iterations") = 100);
+    }
+}
+
+PYBIND11_PLUGIN(binding)
+{
+    py::module m("binding", "python binding example");
+    m.def("version", &::util::get_version, LIB_NAME " version");
+
+    /* homotopy report */
+    py::class_<ss::homotopy_report>(m, "HomotopyReport")
+        .def(py::init())
+        .def_readwrite("iter", &ss::homotopy_report::iter)
+        .def_readwrite("solution_error", &ss::homotopy_report::solution_error);
+
+    /* homotopy solver */
+    auto homotopy = py::class_<ss::homotopy>(m, "Homotopy").def(py::init());
+    builders::solve<float>(homotopy);
+    builders::solve<double>(homotopy);
 
     return m.ptr();
 }
