@@ -28,7 +28,7 @@ configure_file (setup.py.in setup.py)
 
 # -- copy other files
 configure_file ("${ss}/__init__.py"     "${ss}/__init__.py" COPYONLY)
-configure_file ("tests/test_binding.py" "tests/test_bindings.py" COPYONLY)
+configure_file ("tests/test_binding.py" "tests/test_binding.py" COPYONLY)
 
 # -- .whl creation
 add_custom_target (bdist_wheel
