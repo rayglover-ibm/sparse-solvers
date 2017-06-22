@@ -321,24 +321,7 @@ namespace ss
         return true;
     }
 
-    template<typename T>
-    void reconstruct_signal(
-        const T* A,
-        const std::uint32_t m,
-        const std::uint32_t n,
-        const T* x,
-        T* y
-        )
-    {
-        assert(m > 0
-            && n > 0
-            && A != nullptr
-            && x != nullptr
-            && y != nullptr);
 
-        blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0, A,
-            n, x, 1, 0.0, y, 1);
-    }
 
     template<typename T>
     bool mat_norm_l1(
@@ -354,31 +337,6 @@ namespace ss
         mat_view<T> A_mat{ m, n, A };
         return mat_norm_l1<T>(A_mat);
     }
-
-/*  template homotopy_report solve_homotopy<float> (
-        const float*, const std::uint32_t, const std::uint32_t, const std::uint32_t, const float, const float*, float*
-        );
-
-    template homotopy_report solve_homotopy<double>(
-        const double*, const std::uint32_t, const std::uint32_t, const std::uint32_t, const double, const double*, double*
-        );
-
-    template bool mat_norm_l1<float>(
-        float*, const std::uint32_t, const std::uint32_t
-        );
-
-    template bool mat_norm_l1<double>(
-        double*, const std::uint32_t, const std::uint32_t
-        );
-
-    template void reconstruct_signal<float>(
-        const float*, const std::uint32_t, const std::uint32_t, const float*, float*
-        );
-
-    template void reconstruct_signal<double>(
-        const double*, const std::uint32_t, const std::uint32_t, const double*, double*
-        );
-*/
 
     template <> kernelpp::variant<homotopy_report, error_code>
     solve_homotopy::op<compute_mode::CPU>(

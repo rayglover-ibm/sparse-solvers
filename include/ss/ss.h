@@ -62,4 +62,20 @@ namespace ss
         struct state;
         std::unique_ptr<state> m;
     };
+
+    /* Utilities ----------------------------------------------------------- */
+
+    /*
+        computes A x
+        Reconstructs a signal given the sparse representation
+        of that signal.
+
+        A : input matrix A used to construct x
+        x : the sparse representation vector,
+            of length n
+        y : the output of the reconstructed signal,
+            of length m
+    */
+    void reconstruct_signal(
+        const ndspan<float, 2> A, const ndspan<float> x, ndspan<float> y);
 }

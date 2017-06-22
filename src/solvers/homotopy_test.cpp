@@ -89,8 +89,10 @@ TEST(homotopy, noisy_signal)
            Furthermore, since the noise level in the input signal
            is equal to the solver tolerance, we should expect the
            resulting approximation has sparsity of N-1 / N */
-        auto x2 = xt::xarray<float>(x);
-        EXPECT_EQ(xt::nonzero(x2).size(), 1);
+        {
+            auto x2 = xt::xarray<float>(x);
+            EXPECT_EQ(xt::nonzero(x2).size(), 1);
+        }
     }
 }
 
@@ -116,19 +118,32 @@ TEST(homotopy, noisy_patterns)
         auto needle = xt::view(haystack, xt::range(0, int(M), PATTERN /* step */), n);
         needle += 1.0f;
 
+        /* solve */
         xtensor<float, 1> x = xt::zeros<float>({ N });
         auto result = solver.solve(as_span(haystack), as_span(signal), TOL, 25, as_span(x));
 
+        /* check solver statistics */
         ::check_report(result, TOL, 25);
 
         /* argmax(x) == n */
         EXPECT_EQ(xt::amax(x)(), x[n]);
         {
+            /* evaluate the sparse representation. */
             xtensor<float, 1> expect = xt::zeros<float>({ N });
             expect[n] = 1.0;
 
             if (!xt::isclose(x, expect, 1.0 /* relative */, TOL /* absolute */)()) {
                 std::cout << "Solution for signal " << n << " failed a sparisty test:\n" << x << "\n\n";
+                failures++;
+            }
+        }
+        {
+            /* reconstruct the signal given the sparse representation */
+            xt::xtensor<float, 1> y = xt::zeros<float>({ N });
+            ss::reconstruct_signal(as_span(haystack), as_span(x), as_span(y));
+
+            if (!xt::isclose(x, y, 1.0 /* relative */, TOL /* absolute */)()) {
+                std::cout << "Reconstruction of signal " << n << " failed.\n";
                 failures++;
             }
         }
