@@ -348,4 +348,15 @@ namespace ss
     {
         return run_solver<float>(A, max_iterations, tolerance, y, x);
     }
+
+    template <> kernelpp::variant<homotopy_report, error_code>
+    solve_homotopy::op<compute_mode::CPU>(
+        const ndspan<double, 2> A,
+        const ndspan<double> y,
+        double tolerance,
+        std::uint32_t max_iterations,
+        ndspan<double> x)
+    {
+        return run_solver<double>(A, max_iterations, tolerance, y, x);
+    }
 }

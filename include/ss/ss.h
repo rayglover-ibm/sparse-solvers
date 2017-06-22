@@ -58,6 +58,13 @@ namespace ss
                   std::uint32_t    max_iterations,
                   ndspan<float>    x);
 
+        kernelpp::maybe<homotopy_report> solve(
+            const ndspan<double, 2> A,
+            const ndspan<double>    y,
+                  double            tolerance,
+                  std::uint32_t     max_iterations,
+                  ndspan<double>    x);
+
       private:
         struct state;
         std::unique_ptr<state> m;

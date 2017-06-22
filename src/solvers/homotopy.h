@@ -34,5 +34,13 @@ namespace ss
             std::uint32_t max_iterations,
             ndspan<float> x
             );
+
+        template <compute_mode> static kernelpp::variant<homotopy_report, error_code> op(
+            const ndspan<double, 2> A,
+            const ndspan<double> y,
+            double tolerance,
+            std::uint32_t max_iterations,
+            ndspan<double> x
+            );
     };
 }

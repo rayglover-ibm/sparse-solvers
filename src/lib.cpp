@@ -30,13 +30,15 @@ namespace ss
     homotopy::~homotopy() = default;
 
     kernelpp::maybe<ss::homotopy_report> homotopy::solve(
-        const ndspan<float, 2> A,
-        const ndspan<float>    y,
-              float            tolerance,
-              uint32_t         max_iterations,
-              ndspan<float>    x)
+        const ndspan<float, 2> A, const ndspan<float> y, float tol, uint32_t maxiter, ndspan<float> x)
     {
-        return kernelpp::run<solve_homotopy>(A, y, tolerance, max_iterations, x);
+        return kernelpp::run<solve_homotopy>(A, y, tol, maxiter, x);
+    }
+
+    kernelpp::maybe<ss::homotopy_report> homotopy::solve(
+        const ndspan<double, 2> A, const ndspan<double> y, double tol, uint32_t maxiter, ndspan<double> x)
+    {
+        return kernelpp::run<solve_homotopy>(A, y, tol, maxiter, x);
     }
 
     /* Utils --------------------------------------------------------------- */
