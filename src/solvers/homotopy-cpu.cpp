@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.  */
 
 #include "homotopy.h"
-#include "blas_wrapper.h"
 
 #include "linalg/common.h"
+#include "linalg/blas_wrapper.h"
 #include "linalg/online_inverse.h"
 
 #include <cstdint>

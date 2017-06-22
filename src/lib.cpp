@@ -16,8 +16,9 @@ limitations under the License.  */
 
 #include "ss/ss.h"
 #include "solvers/homotopy.h"
+
 #include "linalg/common.h"
-#include "blas_wrapper.h"
+#include "linalg/blas_wrapper.h"
 
 namespace ss
 {
