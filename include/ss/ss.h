@@ -33,8 +33,7 @@ namespace ss
     /* make std::variant happy */
     inline bool operator== (const homotopy_report&, const homotopy_report&) { return false; }
 
-    /*
-        Uses the homotopy method to solve the equation
+    /*  Uses the homotopy method to solve the equation
         min || x || _1  subject to A x = y
 
                      A : sensing matrix of row-major order
@@ -72,8 +71,7 @@ namespace ss
 
     /* Utilities ----------------------------------------------------------- */
 
-    /*
-        computes A x
+    /*  computes A x
         Reconstructs a signal given the sparse representation
         of that signal.
 
@@ -85,4 +83,21 @@ namespace ss
     */
     void reconstruct_signal(
         const ndspan<float, 2> A, const ndspan<float> x, ndspan<float> y);
+
+    void reconstruct_signal(
+        const ndspan<double, 2> A, const ndspan<double> x, ndspan<double> y);
+
+
+    /*  Normalizes the columns of a given matrix in-place according
+        to the L1-norm. The values of A are assumed to be non-negative.
+
+              A : input matrix A to be normalized, in
+                  row-major order
+        returns : a value indicating whether the matrix was
+                  successfully normalized. if false, the
+                  matrix is left unaltered.
+    */
+    bool norm_l1(ndspan<float, 2> A);
+
+    bool norm_l1(ndspan<double, 2> A);
 }

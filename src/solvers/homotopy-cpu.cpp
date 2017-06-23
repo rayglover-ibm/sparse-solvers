@@ -27,26 +27,6 @@ limitations under the License.  */
 
 namespace ss
 {
-    /* The following is a port:
-          of ./tools/sparsity/src/Homotopy.py,
-          at sha1 20b980c7804883d059896e04c3a0047615cbd984,
-          committed 2015-11-09 14:08:24
-    */
-    template<typename T>
-    void columnwise_sum(
-        mat_view<T>& A,
-        T* x
-        )
-    {
-        std::fill_n(x, dim<1>(A), (T)0.0);
-
-        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
-            for (size_t c{ 0 }; c < dim<1>(A); ++c) {
-                x[c] += A(r, c);
-            }
-        }
-    }
-
     template<typename T>
     T inf_norm(const ndspan<T> v, size_t* idx)
     {
@@ -287,59 +267,8 @@ namespace ss
         return{ iter, c_inf };
     }
 
-    template<typename T>
-    bool mat_norm_l1(
-        mat_view<T>& A
-        )
-    {
-        if (dim<1>(A) == 1 /* vector */) {
-            T sum{ 0.0 };
-            columnwise_sum(A, &sum);
-
-            if (sum <= 0) { return false; }
-
-            for (size_t i{ 0 }; i < dim<0>(A); ++i) {
-                A(i, 0) /= sum;
-            }
-        }
-        else {
-            /* matrix */
-            auto sums = std::make_unique<T[]>(dim<1>(A));
-            columnwise_sum(A, sums.get());
-
-            for (size_t i{ 0 }; i < dim<1>(A); ++i) {
-                if (sums[i] <= 0) { return false; }
-            }
-
-            for (size_t r{ 0 }; r < dim<0>(A); ++r) {
-                for (size_t c{ 0 }; c < dim<1>(A); ++c) {
-                    A(r, c) /= sums[c];
-                }
-            }
-        }
-
-        return true;
-    }
-
-
-
-    template<typename T>
-    bool mat_norm_l1(
-        T* A,
-        const std::uint32_t m,
-        const std::uint32_t n
-        )
-    {
-        assert(m > 0
-            && n > 0
-            && A != nullptr);
-
-        mat_view<T> A_mat{ m, n, A };
-        return mat_norm_l1<T>(A_mat);
-    }
-
     template <> kernelpp::variant<homotopy_report, error_code>
-    solve_homotopy::op<compute_mode::CPU>(
+    solve_homotopy::op<compute_mode::CPU, float>(
         const ndspan<float, 2> A,
         const ndspan<float> y,
         float tolerance,
@@ -350,7 +279,7 @@ namespace ss
     }
 
     template <> kernelpp::variant<homotopy_report, error_code>
-    solve_homotopy::op<compute_mode::CPU>(
+    solve_homotopy::op<compute_mode::CPU, double>(
         const ndspan<double, 2> A,
         const ndspan<double> y,
         double tolerance,

@@ -27,20 +27,13 @@ namespace ss
     KERNEL_DECL(solve_homotopy,
         compute_mode::CPU)
     {
-        template <compute_mode> static kernelpp::variant<homotopy_report, error_code> op(
-            const ndspan<float, 2> A,
-            const ndspan<float> y,
-            float tolerance,
+        template <compute_mode, typename T>
+        static kernelpp::variant<homotopy_report, error_code> op(
+            const ndspan<T, 2> A,
+            const ndspan<T> y,
+            T tolerance,
             std::uint32_t max_iterations,
-            ndspan<float> x
-            );
-
-        template <compute_mode> static kernelpp::variant<homotopy_report, error_code> op(
-            const ndspan<double, 2> A,
-            const ndspan<double> y,
-            double tolerance,
-            std::uint32_t max_iterations,
-            ndspan<double> x
+            ndspan<T> x
             );
     };
 }

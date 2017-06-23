@@ -18,6 +18,7 @@ limitations under the License.  */
 #include "solvers/homotopy.h"
 
 #include "linalg/common.h"
+#include "linalg/norms.h"
 #include "linalg/blas_wrapper.h"
 
 namespace ss
@@ -55,5 +56,13 @@ namespace ss
             A.cbegin(), n,
             x.cbegin(), 1, 0.0,
             y.begin(), 1);
+    }
+
+    bool norm_l1(ndspan<float, 2> A) {
+        return l1<float>(A);
+    }
+
+    bool norm_l1(ndspan<double, 2> A) {
+        return l1<double>(A);
     }
 }
