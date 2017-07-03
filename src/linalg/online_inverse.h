@@ -227,8 +227,8 @@ namespace ss
     template <typename T>
     online_column_inverse<T>::online_column_inverse(const mat_view<T>& A)
         : _A{ A }
-        , _indices(dim<1>(A), false)
         , _n{ 0 }
+        , _indices(dim<1>(A), false)
     {
         _inv.reserve(10 * 10);
         _A_sub_t.reserve(10 * dim<0>(A));
