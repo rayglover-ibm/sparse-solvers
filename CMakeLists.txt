@@ -72,6 +72,7 @@ if (${ss}_WITH_TESTS)
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"
         "src/linalg/online_inverse_test.cpp"
+        "src/linalg/norms_test.cpp"
     )
     target_include_directories ("${ss}_test"
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"

@@ -33,9 +33,7 @@ namespace ss
     template<typename T>
     bool l1(ndspan<T, 1> A)
     {
-        T sum{ 0.0 };
-        columnwise_sum(A, &sum);
-
+        T sum = xt::sum(A)();
         if (sum <= 0) { return false; }
 
         for (size_t i{ 0 }; i < dim<0>(A); ++i) {
@@ -47,7 +45,6 @@ namespace ss
     template<typename T>
     bool l1(ndspan<T, 2> A)
     {
-        /* matrix */
         auto sums = std::make_unique<T[]>(dim<1>(A));
         columnwise_sum(A, sums.get());
 
