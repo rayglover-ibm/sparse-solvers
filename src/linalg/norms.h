@@ -13,50 +13,23 @@ See the License for the specific language governing permissions and
 limitations under the License.  */
 #pragma once
 
-#include <memory>
 #include "linalg/common.h"
+
+#include <memory>
+#include <xtensor/xview.hpp>
 
 namespace ss
 {
-    template<typename T>
-    void columnwise_sum(ndspan<T, 2> A, T* x)
+    template<typename T, size_t N>
+    bool l1(ndspan<T, N> A)
     {
-        std::fill_n(x, dim<1>(A), (T)0.0);
+        xt::xtensor<T, 1> sums = xt::sum(A, {0});
 
-        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
-            for (size_t c{ 0 }; c < dim<1>(A); ++c) {
-                x[c] += A(r, c);
-            }
+        if (xt::any(sums < T(0)))
+            return false;
+        else {
+            xt::view(A) /= sums;
+            return true;
         }
-    }
-
-    template<typename T>
-    bool l1(ndspan<T, 1> A)
-    {
-        T sum = xt::sum(A)();
-        if (sum <= 0) { return false; }
-
-        for (size_t i{ 0 }; i < dim<0>(A); ++i) {
-            A(i, 0) /= sum;
-        }
-        return true;
-    }
-
-    template<typename T>
-    bool l1(ndspan<T, 2> A)
-    {
-        auto sums = std::make_unique<T[]>(dim<1>(A));
-        columnwise_sum(A, sums.get());
-
-        for (size_t i{ 0 }; i < dim<1>(A); ++i) {
-            if (sums[i] <= 0) { return false; }
-        }
-
-        for (size_t r{ 0 }; r < dim<0>(A); ++r) {
-            for (size_t c{ 0 }; c < dim<1>(A); ++c) {
-                A(r, c) /= sums[c];
-            }
-        }
-        return true;
     }
 }

@@ -25,11 +25,11 @@ TEST(norms, l1_matrix)
 TEST(norms, l1_vector)
 {
     xtensor<float, 1> x{
-        {1, 2, 3, 4, 5, 0},
+        1, 2, 3, 4, 5, 0
     };
 
     xtensor<float, 1> expect{
-        {0.06667, 0.1333, 0.2, 0.2666, 0.3333, 0}
+        0.06667, 0.1333, 0.2, 0.2666, 0.3333, 0
     };
 
     ss::l1(ss::as_span(x));
