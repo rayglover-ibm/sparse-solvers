@@ -28,7 +28,7 @@ namespace ss
         if (xt::any(sums < T(0)))
             return false;
         else {
-            xt::view(A) /= sums;
+            ss::view(A) /= sums;
             return true;
         }
     }

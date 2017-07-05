@@ -42,11 +42,11 @@ TEST(homotopy, smoke_test)
     for (uint32_t n = 0; n < N; n++)
     {
         /* construct signal */
-        view(signal) = 0.0f;
+        ss::view(signal) = 0.0f;
         signal[n] = 1.0f;
 
         /* sparse representation */
-        view(x) = 0.0f;
+        ss::view(x) = 0.0f;
 
         auto result = solver.solve(
             as_span(identity), as_span(signal), .001f, N, as_span(x));
@@ -78,7 +78,7 @@ TEST(homotopy, noisy_signal)
         signal[n] += 1.0f - (0.5f * NOISE);
 
         /* sparse representation */
-        view(x) = 0.0f;
+        ss::view(x) = 0.0f;
 
         auto result = solver.solve(
             as_span(identity), as_span(signal), NOISE, N, as_span(x));

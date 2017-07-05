@@ -16,6 +16,7 @@ limitations under the License.  */
 
 #include <xtensor/xbuffer_adaptor.hpp>
 #include <xtensor/xadapt.hpp>
+#include <xtensor/xview.hpp>
 #include <array>
 
 namespace ss
@@ -105,5 +106,13 @@ namespace ss
 
         return xt::xadapt(buf, len, xt::no_ownership(), t.shape(),
             xt::layout_type::row_major);
+    }
+
+    /* view ---------------------------------------------------------------- */
+
+    template <class E>
+    inline auto view(E&& e)
+    {
+        return xt::view(std::forward<E>(e), xt::all());
     }
 }

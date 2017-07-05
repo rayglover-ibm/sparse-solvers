@@ -196,7 +196,7 @@ namespace ss
         const size_t N = dim<1>(A);
 
         /* initialise x */
-        xt::view(x) = T(0);
+        view(x) = T(0);
 
         auto direction = xt::xtensor<T, 1>::from_shape({ N });
         auto c         = xt::xtensor<T, 1>::from_shape({ N });
@@ -236,7 +236,7 @@ namespace ss
             inv.flip(gamma.second);
 
             /* update x */
-            xt::view(x) += gamma.first * direction;
+            ss::view(x) += gamma.first * direction;
 
             /* update residual vector */
             residual_vector(A, y, x, as_span(c));
