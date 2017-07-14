@@ -139,7 +139,7 @@ TEST(homotopy, noisy_patterns)
         }
         {
             /* reconstruct the signal given the sparse representation */
-            xt::xtensor<float, 1> y = xt::zeros<float>({ N });
+            xt::xtensor<float, 1> y = xt::zeros<float>({ M });
             ss::reconstruct_signal(as_span(haystack), as_span(x), as_span(y));
 
             if (!xt::isclose(x, y, 1.0 /* relative */, TOL /* absolute */)()) {
