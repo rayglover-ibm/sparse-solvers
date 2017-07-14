@@ -62,13 +62,11 @@ namespace builders
                uint32_t maxiter = 100)
             {
                 auto x = py::array_t<T>(A.shape(1));
-                auto result = solver.solve(
+                kernelpp::maybe<ss::homotopy_report> result = solver.solve(
                     ss::as_span<2>(A), ss::as_span<1>(b), tol, maxiter, ss::as_span<1>(x));
 
                 util::try_throw(result);
-                ss::homotopy_report hr = result.get<ss::homotopy_report>();
-
-                return std::make_tuple(x, std::move(hr));
+                return std::make_tuple(x, result.get<ss::homotopy_report>());
             },
 
             "Execute the solver on the given inputs.",
