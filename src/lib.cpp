@@ -44,18 +44,32 @@ namespace ss
 
     /* Utils --------------------------------------------------------------- */
 
-    void reconstruct_signal(
-        const ndspan<float, 2> A, const ndspan<float> x, ndspan<float> y)
+    namespace detail
     {
-        assert (dim<1>(A) == x.size()
-            &&  dim<0>(A) == y.size());
+        template <typename T>
+        void reconstruct_signal(
+            const ndspan<T, 2> A, const ndspan<T> x, ndspan<T> y)
+        {
+            assert (dim<1>(A) == x.size()
+                &&  dim<0>(A) == y.size());
 
-        size_t m = dim<0>(A), n = dim<1>(A);
+            size_t m = dim<0>(A), n = dim<1>(A);
 
-        blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0,
-            A.cbegin(), n,
-            x.cbegin(), 1, 0.0,
-            y.begin(), 1);
+            blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0,
+                A.cbegin(), n,
+                x.cbegin(), 1, 0.0,
+                y.begin(), 1);
+        }
+    }
+
+    void reconstruct_signal(
+        const ndspan<float, 2> A, const ndspan<float> x, ndspan<float> y) {
+        detail::reconstruct_signal(A, x, y);
+    }
+
+    void reconstruct_signal(
+        const ndspan<double, 2> A, const ndspan<double> x, ndspan<double> y) {
+        detail::reconstruct_signal(A, x, y);
     }
 
     bool norm_l1(ndspan<float, 2> A) {
