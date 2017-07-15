@@ -17,19 +17,21 @@ limitations under the License.  */
 
 #include <memory>
 #include <xtensor/xview.hpp>
+#include <xtensor/xio.hpp>
 
 namespace ss
 {
-    template<typename T, size_t N>
-    bool l1(ndspan<T, N> A)
+    template <typename T>
+    void l1(ndspan<T, 2> A)
     {
-        xt::xtensor<T, 1> sums = xt::sum(A, {0});
+        xt::xtensor<T, 1> sums = xt::sum(xt::abs(A), {0});
+        view(A) /= sums;
+    }
 
-        if (xt::any(sums < T(0)))
-            return false;
-        else {
-            ss::view(A) /= sums;
-            return true;
-        }
+    template <typename T>
+    void l1(ndspan<T, 1> x)
+    {
+        T sum = xt::sum(xt::abs(x))();
+        view(x) /= sum;
     }
 }

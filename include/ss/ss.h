@@ -89,15 +89,11 @@ namespace ss
 
 
     /*  Normalizes the columns of a given matrix in-place according
-        to the L1-norm. The values of A are assumed to be non-negative.
+        to the L1-norm of each column.
 
-              A : input matrix A to be normalized, in
-                  row-major order
-        returns : a value indicating whether the matrix was
-                  successfully normalized. if false, the
-                  matrix is left unaltered.
+        A : input matrix A to be normalized
     */
-    bool norm_l1(ndspan<float, 2> A);
+    void norm_l1(ndspan<float, 2> A);
 
-    bool norm_l1(ndspan<double, 2> A);
+    void norm_l1(ndspan<double, 2> A);
 }

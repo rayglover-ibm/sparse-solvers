@@ -72,11 +72,11 @@ namespace ss
         detail::reconstruct_signal(A, x, y);
     }
 
-    bool norm_l1(ndspan<float, 2> A) {
-        return l1<float>(A);
+    void norm_l1(ndspan<float, 2> A) {
+        l1<float>(A);
     }
 
-    bool norm_l1(ndspan<double, 2> A) {
-        return l1<double>(A);
+    void norm_l1(ndspan<double, 2> A) {
+        l1<double>(A);
     }
 }
