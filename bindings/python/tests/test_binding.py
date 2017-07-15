@@ -1,3 +1,7 @@
+'''
+Python binding tests
+'''
+
 import unittest
 import sparsesolvers as ss
 import numpy as np
@@ -14,14 +18,45 @@ class HomotopySolverTest(unittest.TestCase):
             x, info = solver.solve(A, signal)
             np.array_equal(signal, x)
 
-            assert(info.solution_error == 0)
-            assert(info.iter == 1)
+            assert info.solution_error == 0
+            assert info.iter == 1
 
     def test_smoke_f32(self):
+        '''smoke test (float32)'''
         self._test_smoke(5, np.float32)
 
     def test_smoke_f64(self):
+        '''smoke test (float64)'''
         self._test_smoke(5, np.float64)
+
+
+    def test_row_subset(self):
+        '''test a subset of rows'''
+
+        A = np.random.rand(10, 5) * 0.1
+        A_sub = A[:5, :] # subset of rows
+        A_sub[:, 0] = 1  # needle to find
+
+        signal = np.ones(5)
+        x, info = ss.Homotopy().solve(A_sub, signal)
+
+        assert len(x) == 5
+        assert np.linalg.norm(x, 0) == 1
+
+    def test_col_subset(self):
+        '''test a subset of columns'''
+
+        A = np.random.rand(10, 5) * 0.1
+        A[:, 0] = 1 # column we'll be skipping
+        A[:, 3] = 1 # needle to find
+
+        A_sub = A[:, 2:]
+        signal = np.ones(10)
+        x, info = ss.Homotopy().solve(A_sub, signal)
+
+        assert len(x) == 3
+        assert np.argmax(x) == 1
+
 
 if __name__ == '__main__':
     print("[sparsesolvers] version={}".format(ss.version()))
