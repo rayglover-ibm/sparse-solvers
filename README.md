@@ -25,7 +25,7 @@ At a minimum, you will need:
 
 ### Python Package (optional)
 
-To build the python package you will need Python 2.7/3, along with the relevant Python development package, such as `python-dev` for Debian/Ubuntu. For Windows/Mac I recommend [Conda](https://conda.io/miniconda.html).
+To build the python package you will need the relevant Python development package, such as `python-dev` for Debian/Ubuntu. For Windows/Mac I recommend [Conda](https://conda.io/miniconda.html).
 
 ### Build
 
@@ -39,17 +39,17 @@ Build using CMake in the typical way:
 
 There are a number of _sparse-solvers_ specific CMake options:
 
-    | CMake option                 | Description            | Default |
-    |------------------------------|:-----------------------|:--------|
-    | `sparsesolvers_WITH_TESTS`   | Enable unit tests      | ON      |
-    | `sparsesolvers_WITH_BENCHES` | Enable benchmarks      | OFF     |
-    | `sparsesolvers_WITH_PYTHON`  | Enable python binding  | OFF     |
+| CMake option                 | Description            | Default |
+|:-----------------------------|:-----------------------|:--------|
+| `sparsesolvers_WITH_TESTS`   | Enable unit tests      | ON      |
+| `sparsesolvers_WITH_BENCHES` | Enable benchmarks      | OFF     |
+| `sparsesolvers_WITH_PYTHON`  | Enable python binding  | OFF     |
 
 Lastly, you might find some of these CMake options useful; I've included them here as a reference:
 
-    | CMake option               | Description            | Default |
-    |----------------------------|:-----------------------|:--------|
-    | `PYTHON_EXECUTABLE:FILEPATH=<path-to-python-executable>` | Override the python location | <small>System specific</small> |
+| CMake option               | Description            | Default |
+|:---------------------------|:-----------------------|:--------|
+| `PYTHON_EXECUTABLE:FILEPATH=<path-to-python-executable>` | Override the python location | <small>System specific</small> |
 
 ### Tests / Benchmarks
 
