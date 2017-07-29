@@ -18,6 +18,8 @@ limitations under the License.  */
 
 #include <ss/ndspan.h>
 #include <xtensor/xview.hpp>
+#include <kernelpp/kernel.h>
+#include <kernelpp/kernel_invoke.h>
 
 #include <memory>
 #include <cassert>
@@ -89,123 +91,119 @@ namespace ss { namespace detail
      *  is moved to `dest`, with intermediate rows and columns shifted to
      *  account for this movement.
      */
-    template <typename T>
-    void square_permute(
-        mat_view<T> A,
-        const size_t src,
-        const size_t dest
-        )
+    KERNEL_DECL(square_permute, ::kernelpp::compute_mode::CPU)
     {
-        assert(dim<0>(A) == dim<1>(A));
+        template<::kernelpp::compute_mode, typename T> static void op(
+            mat_view<T> A, const size_t src, const size_t dest)
+        {
+            assert(dim<0>(A) == dim<1>(A));
 
-        T* ptr = &A(0, 0);
-        ptrdiff_t N = dim<1>(A), srci = src, desti = dest;
+            T* ptr = &A(0, 0);
+            ptrdiff_t N = dim<1>(A), srci = src, desti = dest;
 
-        if (N == 1 || desti == srci) {
-            return;
-        }
-        else if (desti > srci) {
-            /* traverse forwards */
-            for (ptrdiff_t m = 0, i = 0; m < N; m++) {
-                /* row rotation */
-                if (m >= srci && m < desti) {
-                    for (ptrdiff_t j = i; j < i + N; j++) {
-                        T tmp = ptr[j];
+            if (N == 1 || desti == srci) {
+                return;
+            }
+            else if (desti > srci) {
+                /* traverse forwards */
+                for (ptrdiff_t m = 0, i = 0; m < N; m++) {
+                    /* row rotation */
+                    if (m >= srci && m < desti) {
+                        for (ptrdiff_t j = i; j < i + N; j++) {
+                            T tmp = ptr[j];
 
-                        ptr[j] = ptr[j + N];
-                        ptr[j + N] = tmp;
+                            ptr[j] = ptr[j + N];
+                            ptr[j + N] = tmp;
+                        }
                     }
+
+                    /* move to src column */
+                    i += srci;
+
+                    /* column rotation */
+                    for (ptrdiff_t n = srci; n < desti; n++, i++) {
+                        T tmp = ptr[i];
+
+                        ptr[i] = ptr[i + 1];
+                        ptr[i + 1] = tmp;
+                    }
+
+                    /* move to next row */
+                    i += N - desti;
                 }
+            }
+            else {
+                /* traverse backwards */
+                for (ptrdiff_t m = N-1, i = (N * N)-1; m >= 0; m--) {
+                    /* row rotation */
+                    if (m <= srci && m > desti) {
+                        for (ptrdiff_t j = i; j > i - N; j--) {
+                            T tmp = ptr[j];
 
-                /* move to src column */
-                i += srci;
+                            ptr[j] = ptr[j - N];
+                            ptr[j - N] = tmp;
+                        }
+                    }
 
-                /* column rotation */
-                for (ptrdiff_t n = srci; n < desti; n++, i++) {
-                    T tmp = ptr[i];
+                    /* move to src column */
+                    i -= (N - 1) - srci;
 
-                    ptr[i] = ptr[i + 1];
-                    ptr[i + 1] = tmp;
+                    /* column rotation */
+                    for (ptrdiff_t n = srci; n > desti; n--, i--) {
+                        T tmp = ptr[i];
+
+                        ptr[i] = ptr[i - 1];
+                        ptr[i - 1] = tmp;
+                    }
+
+                    /* move to next row */
+                    i -= desti + 1;
                 }
-
-                /* move to next row */
-                i += N - desti;
             }
         }
-        else {
-            /* traverse backwards */
-            for (ptrdiff_t m = N-1, i = (N * N)-1; m >= 0; m--) {
-                /* row rotation */
-                if (m <= srci && m > desti) {
-                    for (ptrdiff_t j = i; j > i - N; j--) {
-                        T tmp = ptr[j];
+    };
 
-                        ptr[j] = ptr[j - N];
-                        ptr[j - N] = tmp;
-                    }
-                }
+    KERNEL_DECL(erase_last_rowcol, ::kernelpp::compute_mode::CPU)
+    {
+        template<::kernelpp::compute_mode, typename T> static void op(
+            std::vector<T>& v, const size_t M, const size_t N)
+        {
+            assert(v.size() == M * N);
 
-                /* move to src column */
-                i -= (N - 1) - srci;
+            size_t i = 0;
+            for (size_t m = 0; m < M-1; m++)
+            {
+                /* traversing forwards, shift values left such
+                 * that the last column is removed */
+                for (size_t n = 0; n < N-1; n++, i++)
+                    v[i] = v[i + m];
+            }
 
-                /* column rotation */
-                for (ptrdiff_t n = srci; n > desti; n--, i--) {
-                    T tmp = ptr[i];
+            v.erase(v.end() - (N + M - 1), v.end());
+        }
+    };
 
-                    ptr[i] = ptr[i - 1];
-                    ptr[i - 1] = tmp;
-                }
+    KERNEL_DECL(insert_last_rowcol, ::kernelpp::compute_mode::CPU)
+    {
+        template<::kernelpp::compute_mode, typename T> static void op(
+            std::vector<T>& v, const size_t M, const size_t N, const T& val)
+        {
+            assert(v.size() == M * N);
+            v.resize(v.size() + N + M + 1, val);
 
-                /* move to next row */
-                i -= desti + 1;
+            ptrdiff_t i = (M * N) - 1;
+            for (ptrdiff_t m = M-1; m >= 0; m--)
+            {
+                /* fill last column */
+                v[i + m + 1] = val;
+
+                /* traversing backwards, shift values right such
+                * that a column is appended */
+                for (ptrdiff_t n = N-1; n >= 0; n--, i--)
+                    v[i + m] = v[i];
             }
         }
-    }
-
-    template <typename T>
-    void erase_last_rowcol(
-        std::vector<T>& v,
-        const size_t M,
-        const size_t N
-        )
-    {
-        assert(v.size() == M * N);
-
-        size_t i = 0;
-        for (size_t m = 0; m < M-1; m++)
-        {
-            /* traversing forwards, shift values left such
-             * that the last column is removed */
-            for (size_t n = 0; n < N-1; n++, i++)
-                v[i] = v[i + m];
-        }
-
-        v.erase(v.end() - (N + M - 1), v.end());
-    }
-
-    template <typename T>
-    void insert_last_rowcol(
-        std::vector<T>& v,
-        const size_t M,
-        const size_t N,
-        const T& val
-        )
-    {
-        assert(v.size() == M * N);
-        v.resize(v.size() + N + M + 1, val);
-
-        ptrdiff_t i = (M * N) - 1;
-        for (ptrdiff_t m = M-1; m >= 0; m--)
-        {
-            /* fill last column */
-            v[i + m + 1] = val;
-
-            /* traversing backwards, shift values right such
-             * that a column is appended */
-            for (ptrdiff_t n = N-1; n >= 0; n--, i--)
-                v[i + m] = v[i];
-        }
-    }
+    };
 
     template <typename T>
     void insert_col_into_row(
@@ -246,10 +244,8 @@ namespace ss
         size_t const M = dim<0>(_A);
         if (_n == 0) {
             /* initialize */
-// Py       A_gamma = helper.subset_array(A, lambda_indices)
             detail::insert_col_into_row(_A_sub_t, _A, column_idx, 0);
 
-// Py       invAtA = 1.0 / (np.linalg.norm(A_gamma) * np.linalg.norm(A_gamma))
             T A_gamma_norm{ blas::xnrm2(M, _A_sub_t.data(), 1) };
             T inv_at_A { T(1) / (A_gamma_norm * A_gamma_norm) };
 
@@ -259,7 +255,6 @@ namespace ss
             /* compute the inverse as if adding a column to the end */
             size_t idx{ insertion_index(column_idx) };
 
-// Py       u1 = np.dot(matA.T, vCol)
             auto u1 = std::make_unique<T[]>(_n);
             T vcol_dot = 0;
             {
@@ -278,20 +273,17 @@ namespace ss
                 detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
             }
 
-// Py       u2 = np.dot(current_inverse, u1)
             auto u2 = std::make_unique<T[]>(_n);
             blas::xgemv(CblasRowMajor, CblasNoTrans, _n, _n, 1.0,
                 _inv.data(), _n,
                 u1.get(), 1, 0.0,
                 u2.get(), 1);
 
-// Py       d = 1.0 / float(np.dot(vCol.T, vCol) - np.dot(u1.T, u2))
             T d = T(1) / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
 
-            detail::insert_last_rowcol(_inv, _n, _n, T(0));
+            assert(!kernelpp::run<detail::insert_last_rowcol>(_inv, _n, _n, T(0)));
             size_t new_n{ _n + 1 };
 
-// Py       A := alpha*x*y**T + A
             blas::xger(CblasRowMajor, _n, _n, d,
                 u2.get(), 1,
                 u2.get(), 1,
@@ -299,8 +291,6 @@ namespace ss
 
             auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
             /* assign u3 to bottom row/right-most column */
-// Py       new_inverse[0:N, N] = -u3
-// Py       new_inverse[N, 0:N] = -u3.T
             for (size_t i{ 0 }; i < _n; ++i)
             {
                 T u3{ -d * u2[i] };
@@ -310,14 +300,10 @@ namespace ss
             }
 
             /* assign u3 to bottom right */
-// Py       new_inverse[N, N] = d
             new_inv(_n, _n) = d;
 
             /* permute to get the matrix corresponding to original X */
-// Py       permute_order = np.hstack((np.arange(0, pos_vCol), N, np.arange(pos_vCol, N)))
-// Py       new_inverse = new_inverse[:, permute_order]
-// Py       new_inverse = new_inverse[permute_order, :]
-            detail::square_permute(new_inv, _n, idx);
+            assert(!kernelpp::run<detail::square_permute>(new_inv, _n, idx));
         }
 
         _indices[column_idx] = true;
@@ -341,10 +327,6 @@ namespace ss
         else {
             /* permute to bring the column at the end in X */
             mat_view<T> inv = as_span<2>(_inv.data(), { _n, _n });
-
-// Py       permute_order = np.hstack((np.arange(0, pos_vCol), np.arange(pos_vCol + 1, N), pos_vCol))
-// Py       current_inverse = current_inverse[permute_order, :]
-// Py       current_inverse = current_inverse[:, permute_order]
             {
                 /* calculate column to remove */
                 size_t idx{ insertion_index(column_idx) };
@@ -354,32 +336,26 @@ namespace ss
                 _A_sub_t.erase(it, it + dim<0>(_A));
 
                 /* shift to last column */
-                detail::square_permute(inv, idx, dim<1>(inv) - 1);
+                assert(!kernelpp::run<detail::square_permute>(inv, idx, dim<1>(inv) - 1));
             }
 
             /* update the inverse by removing the last column */
             {
                 size_t new_n{ _n - 1 };
-
-// Py           d = current_inverse[N - 1, N - 1]
                 T d{ inv(new_n, new_n) };
 
-// Py           u2 = -(1.0 / d) * current_inverse[0:N - 1, N - 1]
                 blas::xscal(new_n, -(T(1) / d), &inv(0, new_n), _n);
 
-// Py           F11inv = current_inverse[0:N - 1, 0 : N - 1]
-// Py           new_inverse = F11inv - (d * np.outer(u2, u2.T))
-
                 /* A := alpha*x*y**T + A
-                    note: A - d * x == -d * x + A
-                    */
+                   note: A - d * x == -d * x + A
+                 */
                 blas::xger(CblasRowMajor, new_n, new_n, -d,
                     &inv(0, new_n), _n,
                     &inv(0, new_n), _n,
                     &inv(0, 0),     _n);
 
                 /* resize and assign */
-                detail::erase_last_rowcol(_inv, _n, _n);
+                assert(!kernelpp::run<detail::erase_last_rowcol>(_inv, _n, _n));
             }
         }
 

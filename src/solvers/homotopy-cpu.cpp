@@ -91,8 +91,6 @@ namespace ss
         )
     {
         const size_t m = dim<0>(A), n = dim<1>(A);
-
-// Py   A_x = np.dot(A, x_previous)
         xt::xtensor<T, 1> A_x = y;
 
         /* A_x = y - A_x */
@@ -101,7 +99,6 @@ namespace ss
             x_previous.cbegin(), 1, 1.0,
             A_x.begin(), 1);
 
-// Py   return np.dot(np.matrix.transpose(A), difference)
         blas::xgemv(CblasRowMajor, CblasTrans, m, n, 1.0,
             A.cbegin(), n,
             A_x.cbegin() /* difference */, 1, 0.0,
