@@ -39,6 +39,7 @@ target_include_directories (${ss}
     PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include"
             "${CMAKE_CURRENT_BINARY_DIR}/include"
             "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xtensor/include"
+            "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xsimd/include"
             "$<TARGET_PROPERTY:kernelpp,INTERFACE_INCLUDE_DIRECTORIES>"
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
@@ -47,7 +48,7 @@ target_link_libraries (${ss} kernelpp)
 # -- compiler specifics
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_compile_options (${ss} PUBLIC
-        -Wall -Wno-sign-compare
+        -Wall
         -pedantic
         -fdiagnostics-color
         -fno-omit-frame-pointer
@@ -79,6 +80,8 @@ if (${ss}_WITH_TESTS)
     )
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
     target_compile_definitions ("${ss}_test" PUBLIC XTENSOR_ENABLE_ASSERT=ON)
+    target_compile_options ("${ss}_test" PUBLIC -g)
+
     copy_target_files (${ss}_test ${ss})
 
     enable_testing ()
@@ -100,6 +103,7 @@ if (${ss}_WITH_BENCHES)
         GIT_TAG         master
         UPDATE_DISCONNECTED 1
     )
+    set (BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Enable Googlebench test suite" FORCE)
     add_subdirectory ("${googlebench_SOURCE_DIR}" "${googlebench_BINARY_DIR}")
     add_executable ("${ss}_benches" "src/solvers/homotopy_bench.cpp")
     target_link_libraries ("${ss}_benches" "${ss}" benchmark)
