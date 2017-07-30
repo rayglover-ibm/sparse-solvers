@@ -282,7 +282,7 @@ namespace ss
 
             T d = T(1) / (vcol_dot - blas::xdot(_n, u1.get(), 1, u2.get(), 1));
 
-            assert(!kernelpp::run<detail::insert_last_rowcol>(_inv, _n, _n, T(0)));
+            kernelpp::run<detail::insert_last_rowcol>(_inv, _n, _n, T(0));
             size_t new_n{ _n + 1 };
 
             blas::xger(CblasRowMajor, _n, _n, d,
@@ -304,7 +304,7 @@ namespace ss
             new_inv(_n, _n) = d;
 
             /* permute to get the matrix corresponding to original X */
-            assert(!kernelpp::run<detail::square_permute>(new_inv, _n, idx));
+            kernelpp::run<detail::square_permute>(new_inv, _n, idx);
         }
 
         _indices[column_idx] = true;
@@ -337,7 +337,7 @@ namespace ss
                 _A_sub_t.erase(it, it + dim<0>(_A));
 
                 /* shift to last column */
-                assert(!kernelpp::run<detail::square_permute>(inv, idx, dim<1>(inv) - 1));
+                kernelpp::run<detail::square_permute>(inv, idx, dim<1>(inv) - 1);
             }
 
             /* update the inverse by removing the last column */
@@ -356,7 +356,7 @@ namespace ss
                     &inv(0, 0),     _n);
 
                 /* resize and assign */
-                assert(!kernelpp::run<detail::erase_last_rowcol>(_inv, _n, _n));
+                kernelpp::run<detail::erase_last_rowcol>(_inv, _n, _n);
             }
         }
 
