@@ -115,6 +115,8 @@ namespace ss
         const std::vector<bool>& lambda_indices
         )
     {
+        assert(lambda_indices.size() <= dim<1>(A));
+
         /* evaluate the eligible elements of transpose(A) * A * dir_vec */
         const size_t m = dim<0>(A), n = dim<1>(A);
 

@@ -14,15 +14,19 @@ limitations under the License.  */
 #pragma once
 
 #include "ss/ndspan.h"
+#include <xsimd/xsimd.hpp>
 
 namespace ss
 {
     template <typename T>
     using mat_view = ss::ndspan<T, 2>;
 
-    template <typename T>
-    using mat = xt::xtensor<T, 2>;
+    template <typename T, class A = std::allocator<T>>
+    using mat = xt::xtensor<T, 2, xt::layout_type::row_major, A>;
 
     template <size_t D, typename M>
     size_t dim(const M& mat) { return mat.shape()[D]; }
+
+    template <typename T>
+    using aligned_vector = std::vector<T>;
 }

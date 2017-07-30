@@ -18,6 +18,7 @@ limitations under the License.  */
 
 #include <ss/ndspan.h>
 #include <xtensor/xview.hpp>
+#include <xsimd/xsimd.hpp>
 #include <kernelpp/kernel.h>
 #include <kernelpp/kernel_invoke.h>
 
@@ -73,9 +74,9 @@ namespace ss
         /* reference matrix */
         const mat_view<T> _A;
         /* A_gamma transposed */
-        std::vector<T> _A_sub_t;
+        aligned_vector<T> _A_sub_t;
         /* the inverse of A_gamma */
-        std::vector<T> _inv;
+        aligned_vector<T> _inv;
         /* number of columns of _A corresponding to the inverse */
         size_t _n;
         /* column indices of _A corresponding to the inverse */
@@ -166,7 +167,7 @@ namespace ss { namespace detail
     KERNEL_DECL(erase_last_rowcol, ::kernelpp::compute_mode::CPU)
     {
         template<::kernelpp::compute_mode, typename T> static void op(
-            std::vector<T>& v, const size_t M, const size_t N)
+            aligned_vector<T>& v, const size_t M, const size_t N)
         {
             assert(v.size() == M * N);
 
@@ -186,7 +187,7 @@ namespace ss { namespace detail
     KERNEL_DECL(insert_last_rowcol, ::kernelpp::compute_mode::CPU)
     {
         template<::kernelpp::compute_mode, typename T> static void op(
-            std::vector<T>& v, const size_t M, const size_t N, const T& val)
+            aligned_vector<T>& v, const size_t M, const size_t N, const T& val)
         {
             assert(v.size() == M * N);
             v.resize(v.size() + N + M + 1, val);
@@ -198,7 +199,7 @@ namespace ss { namespace detail
                 v[i + m + 1] = val;
 
                 /* traversing backwards, shift values right such
-                * that a column is appended */
+                 * that a column is appended */
                 for (ptrdiff_t n = N-1; n >= 0; n--, i--)
                     v[i + m] = v[i];
             }
@@ -207,7 +208,7 @@ namespace ss { namespace detail
 
     template <typename T>
     void insert_col_into_row(
-        std::vector<T>& v,
+        aligned_vector<T>& v,
         const mat_view<T>& A,
         const size_t src_col,
         const size_t dest_row
