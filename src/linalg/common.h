@@ -28,5 +28,5 @@ namespace ss
     size_t dim(const M& mat) { return mat.shape()[D]; }
 
     template <typename T>
-    using aligned_vector = std::vector<T>;
+    using aligned_vector = std::vector<T, xsimd::aligned_allocator<T, XSIMD_DEFAULT_ALIGNMENT>>;
 }
