@@ -43,24 +43,20 @@ target_include_directories (${ss}
             "$<TARGET_PROPERTY:kernelpp,INTERFACE_INCLUDE_DIRECTORIES>"
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
-target_link_libraries (${ss} kernelpp)
+target_link_libraries (${ss} PUBLIC kernelpp)
 
-# -- compiler specifics
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+# -- compiler/linker specifics (clang/gcc)
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options (${ss} PUBLIC
-        -Wall
-        -pedantic
-        -fdiagnostics-color
-        -fno-omit-frame-pointer
-        -fmax-errors=5
+        -Wall -pedantic -Wno-missing-braces -Wno-deprecated-declarations
+        -fdiagnostics-color -fno-omit-frame-pointer
     )
-
-    if (CMAKE_BUILD_TYPE STREQUAL "Release")
-        set_target_properties (${ss}
-            # strip binary
-            PROPERTIES LINK_FLAGS "-Wl,--strip-all,--gc-sections"
-        )
-    endif ()
+    target_compile_options (${ss} PUBLIC
+        $<$<CONFIG:RELEASE>:-O3>
+    )
+    target_link_libraries (${ss} PUBLIC
+        $<$<CONFIG:RELEASE>:-Wl,--strip-all,--gc-sections>
+    )
 endif ()
 
 # -- main tests

@@ -37,7 +37,7 @@ macro (blas_init target pkg vendor)
     # OpenBLAS library needs to be copied to binary directory
     append_target_files (${target} OpenBLAS)
     
-    target_link_libraries (${target} OpenBLAS)
+    target_link_libraries (${target} PUBLIC OpenBLAS)
     target_include_directories (${target} PUBLIC
         $<TARGET_PROPERTY:OpenBLAS,INTERFACE_INCLUDE_DIRECTORIES>
     )
