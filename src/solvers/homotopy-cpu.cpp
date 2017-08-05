@@ -231,7 +231,7 @@ namespace ss
                 as_span(direction), c_inf, inv.indices());
 
             /* update inverse by inserting/removing the
-                respective index from the inverse */
+               respective index from the inverse */
             inv.flip(gamma.second);
 
             /* update x */

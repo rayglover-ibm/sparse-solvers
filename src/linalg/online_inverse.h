@@ -18,7 +18,7 @@ limitations under the License.  */
 
 #include <ss/ndspan.h>
 #include <xtensor/xview.hpp>
-#include <xsimd/xsimd.hpp>
+
 #include <kernelpp/kernel.h>
 #include <kernelpp/kernel_invoke.h>
 
@@ -164,48 +164,58 @@ namespace ss { namespace detail
         }
     };
 
+    /*  Removes the last row and column from the given matrix
+     *  of M rows and N columns
+     */
     KERNEL_DECL(erase_last_rowcol, ::kernelpp::compute_mode::CPU)
     {
         template<::kernelpp::compute_mode, typename T> static void op(
-            aligned_vector<T>& v, const size_t M, const size_t N)
+            aligned_vector<T>& A, const size_t M, const size_t N)
         {
-            assert(v.size() == M * N);
+            assert(A.size() == M * N);
 
-            size_t i = 0;
-            for (size_t m = 0; m < M-1; m++)
+            /* traversing forwards, shift values left such
+             * that the last column of each row is removed */
+            size_t i = N-1;
+            for (size_t m = 1; m < M-1; m++)
             {
-                /* traversing forwards, shift values left such
-                 * that the last column is removed */
                 for (size_t n = 0; n < N-1; n++, i++)
-                    v[i] = v[i + m];
+                    A[i] = A[i + m];
             }
 
-            v.erase(v.end() - (N + M - 1), v.end());
+            A.erase(A.end() - (N + M - 1), A.end());
         }
     };
 
+    /*  Appends a row and column to the given matrix
+     *  of M rows and N columns
+     */
     KERNEL_DECL(insert_last_rowcol, ::kernelpp::compute_mode::CPU)
     {
         template<::kernelpp::compute_mode, typename T> static void op(
-            aligned_vector<T>& v, const size_t M, const size_t N, const T& val)
+            aligned_vector<T>& A, const size_t M, const size_t N, const T& val)
         {
-            assert(v.size() == M * N);
-            v.resize(v.size() + N + M + 1, val);
+            assert(A.size() == M * N);
+            A.resize(A.size() + N + M + 1, val);
 
+            /* traversing backwards, shift values right such
+             * that a column on each row is appended */
             ptrdiff_t i = (M * N) - 1;
             for (ptrdiff_t m = M-1; m >= 0; m--)
             {
                 /* fill last column */
-                v[i + m + 1] = val;
+                A[m + i + 1] = val;
 
-                /* traversing backwards, shift values right such
-                 * that a column is appended */
                 for (ptrdiff_t n = N-1; n >= 0; n--, i--)
-                    v[i + m] = v[i];
+                    A[i + m] = A[i];
             }
         }
     };
 
+    /*  Inserts a column from A in to a row in v. v is assumed to
+     *  be a matrix with a number of columns equal to the number of
+     *  rows in A.
+     */
     template <typename T>
     void insert_col_into_row(
         aligned_vector<T>& v,

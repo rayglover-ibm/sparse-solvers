@@ -122,18 +122,28 @@ TEST(online_inverse, square_permute_4)
 TEST(online_inverse, erase_last_rowcol)
 {
     using op = ::ss::detail::erase_last_rowcol;
+    {
+        ss::aligned_vector<float> A{
+            1, 2, 3,
+            4, 5, 6,
+            7, 8, 9
+        };
 
-    ss::aligned_vector<float> A{
-        1, 2, 3,
-        4, 5, 6,
-        7, 8, 9
-    };
+        EXPECT_FALSE(run<op>(A, 3, 3));
+        EXPECT_EQ(A, (ss::aligned_vector<float>{ 1, 2, 4, 5 }));
 
-    EXPECT_FALSE(run<op>(A, 3, 3));
-    EXPECT_EQ(A, (ss::aligned_vector<float>{ 1, 2, 4, 5 }));
+        EXPECT_FALSE(run<op>(A, 2, 2));
+        EXPECT_EQ(A, (ss::aligned_vector<float>{ 1 }));
+    }
+    {
+        ss::aligned_vector<float> A{
+            1, 2, 3,
+            4, 5, 6
+        };
 
-    EXPECT_FALSE(run<op>(A, 2, 2));
-    EXPECT_EQ(A, (ss::aligned_vector<float>{ 1 }));
+        EXPECT_FALSE(run<op>(A, 2, 3));
+        EXPECT_EQ(A, (ss::aligned_vector<float>{ 1, 2 }));
+    }
 }
 
 TEST(online_inverse, insert_last_rowcol)
@@ -157,6 +167,17 @@ TEST(online_inverse, insert_last_rowcol)
             1, 2, 3, 0,
             4, 5, 6, 0,
             7, 8, 9, 0,
+            0, 0, 0, 0
+        }));
+    }
+    {
+        ss::aligned_vector<float> A{
+            1, 2, 3
+        };
+
+        EXPECT_FALSE(run<op>(A, 1, 3, 0.0f));
+        EXPECT_EQ(A, (ss::aligned_vector<float>{
+            1, 2, 3, 0,
             0, 0, 0, 0
         }));
     }
