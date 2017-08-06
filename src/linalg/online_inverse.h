@@ -88,77 +88,73 @@ namespace ss
 
 namespace ss { namespace detail
 {
-    /*  Permutes the given matrix `A` such that the row and column `src`
+    /*  Permutes the given square matrix `A` such that the row and column `src`
      *  is moved to `dest`, with intermediate rows and columns shifted to
      *  account for this movement.
      */
     KERNEL_DECL(square_permute, ::kernelpp::compute_mode::CPU)
     {
-        template<::kernelpp::compute_mode, typename T> static void op(
-            mat_view<T> A, const size_t src, const size_t dest)
+        template <typename T>
+        static void swap_all_forwards(T* begin, T* end, T* dest)
+        {
+            assert(begin <= end);
+
+            for (; begin != end; begin++, dest++) {
+                T tmp = *begin;
+
+                *begin = *dest;
+                *dest = tmp;
+            }
+        }
+
+        template <typename T>
+        static void swap_all_backwards(T* begin, T* end, T* dest)
+        {
+            assert(begin >= end);
+
+            for (; begin != end; begin--, dest--) {
+                T tmp = *begin;
+
+                *begin = *dest;
+                *dest = tmp;
+            }
+        }
+
+        template <::kernelpp::compute_mode, typename T>
+        static void op(mat_view<T> A, const size_t src, const size_t dest)
         {
             assert(dim<0>(A) == dim<1>(A));
 
             T* ptr = &A(0, 0);
-            ptrdiff_t N = dim<1>(A), srci = src, desti = dest;
+            const ptrdiff_t N = dim<1>(A), srci = src, desti = dest;
 
             if (N == 1 || desti == srci) {
                 return;
             }
             else if (desti > srci) {
-                /* traverse forwards */
-                for (ptrdiff_t m = 0, i = 0; m < N; m++) {
-                    /* row rotation */
+                /* traverse forwards over all rows */
+                for (ptrdiff_t m = 0, i = 0; m < N; m++, i += N) {
+                    T* row = &ptr[i];
+
                     if (m >= srci && m < desti) {
-                        for (ptrdiff_t j = i; j < i + N; j++) {
-                            T tmp = ptr[j];
-
-                            ptr[j] = ptr[j + N];
-                            ptr[j + N] = tmp;
-                        }
+                        /* single row rotation */
+                        swap_all_forwards(row, &row[N], &row[N]);
                     }
-
-                    /* move to src column */
-                    i += srci;
-
                     /* column rotation */
-                    for (ptrdiff_t n = srci; n < desti; n++, i++) {
-                        T tmp = ptr[i];
-
-                        ptr[i] = ptr[i + 1];
-                        ptr[i + 1] = tmp;
-                    }
-
-                    /* move to next row */
-                    i += N - desti;
+                    swap_all_forwards(&row[srci], &row[desti], &row[srci + 1]);
                 }
             }
             else {
-                /* traverse backwards */
-                for (ptrdiff_t m = N-1, i = (N * N)-1; m >= 0; m--) {
-                    /* row rotation */
+                /* traverse backwards over all rows */
+                for (ptrdiff_t m = N-1, i = (N * N); m >= 0; m--, i -= N) {
+                    T* row = &ptr[i - N];
+
                     if (m <= srci && m > desti) {
-                        for (ptrdiff_t j = i; j > i - N; j--) {
-                            T tmp = ptr[j];
-
-                            ptr[j] = ptr[j - N];
-                            ptr[j - N] = tmp;
-                        }
+                        /* single row rotation */
+                        swap_all_forwards(row, &row[N], &row[-N]);
                     }
-
-                    /* move to src column */
-                    i -= (N - 1) - srci;
-
                     /* column rotation */
-                    for (ptrdiff_t n = srci; n > desti; n--, i--) {
-                        T tmp = ptr[i];
-
-                        ptr[i] = ptr[i - 1];
-                        ptr[i - 1] = tmp;
-                    }
-
-                    /* move to next row */
-                    i -= desti + 1;
+                    swap_all_backwards(&row[srci], &row[desti], &row[srci - 1]);
                 }
             }
         }
@@ -169,7 +165,7 @@ namespace ss { namespace detail
      */
     KERNEL_DECL(erase_last_rowcol, ::kernelpp::compute_mode::CPU)
     {
-        template<::kernelpp::compute_mode, typename T> static void op(
+        template <::kernelpp::compute_mode, typename T> static void op(
             aligned_vector<T>& A, const size_t M, const size_t N)
         {
             assert(A.size() == M * N);
@@ -179,7 +175,7 @@ namespace ss { namespace detail
             size_t i = N-1;
             for (size_t m = 1; m < M-1; m++)
             {
-                for (size_t n = 0; n < N-1; n++, i++)
+                for (const size_t end = i + N-1; i < end; i++)
                     A[i] = A[i + m];
             }
 
@@ -192,21 +188,21 @@ namespace ss { namespace detail
      */
     KERNEL_DECL(insert_last_rowcol, ::kernelpp::compute_mode::CPU)
     {
-        template<::kernelpp::compute_mode, typename T> static void op(
+        template <::kernelpp::compute_mode, typename T> static void op(
             aligned_vector<T>& A, const size_t M, const size_t N, const T& val)
         {
             assert(A.size() == M * N);
             A.resize(A.size() + N + M + 1, val);
 
             /* traversing backwards, shift values right such
-             * that a column on each row is appended */
+             * that a column on each row is inserted */
             ptrdiff_t i = (M * N) - 1;
             for (ptrdiff_t m = M-1; m >= 0; m--)
             {
                 /* fill last column */
                 A[m + i + 1] = val;
 
-                for (ptrdiff_t n = N-1; n >= 0; n--, i--)
+                for (const ptrdiff_t start = i - (N-1); start <= i; i--)
                     A[i + m] = A[i];
             }
         }
