@@ -49,6 +49,7 @@ Lastly, you might find some of these CMake options useful; I've included them he
 
     | CMake option               | Description            | Default |
     |----------------------------|:-----------------------|:--------|
+    | `OpenBLAS_microarch`       | OpenBLAS CPU microarchitecture to use | NEHALEM |
     | `PYTHON_EXECUTABLE:FILEPATH=<path-to-python-executable>` | Override the python location | <small>System specific</small> |
 
 ### Tests / Benchmarks
