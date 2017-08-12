@@ -25,11 +25,19 @@ add_subdirectory (third_party/kernelpp)
 include (BlasUtils)
 
 # -- core library
-add_library (${ss} STATIC
+list (APPEND src
     "src/lib.cpp"
     "src/solvers/homotopy-cpu.cpp"
 )
+# if (kernelpp_WITH_AVX)
+#     list (APPEND src
+#         "src/linalg/online_inverse-avx.cpp"
+#     )
+# endif ()
+
+add_library (${ss} STATIC ${src})
 blas_init (${ss} blas_target blas_vendor)
+
 configure_file (
     "include/ss/ss_config.h.in"
     "include/ss/ss_config.h"
@@ -52,10 +60,7 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         -fdiagnostics-color -fno-omit-frame-pointer
     )
     target_compile_options (${ss} PUBLIC
-        $<$<CONFIG:RELEASE>:-O3>
-    )
-    target_link_libraries (${ss} PUBLIC
-        $<$<CONFIG:RELEASE>:-Wl,--strip-all,--gc-sections>
+        $<$<CONFIG:Release>:-O3 -g -mavx2>
     )
 endif ()
 
@@ -65,6 +70,7 @@ if (${ss}_WITH_TESTS)
         # note: google test should be enabled by default by kernelpp
         message (SEND_ERROR "Tests could not be built: Google Test not configured correctly.")
     endif ()
+
     add_executable ("${ss}_test"
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"

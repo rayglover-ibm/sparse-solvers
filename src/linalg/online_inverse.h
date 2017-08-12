@@ -24,6 +24,8 @@ limitations under the License.  */
 
 #include <memory>
 #include <cassert>
+#include <algorithm>
+#include <iterator>
 
 namespace ss
 {
@@ -88,41 +90,18 @@ namespace ss
 
 namespace ss { namespace detail
 {
+    using namespace ::kernelpp;
+
     /*  Permutes the given square matrix `A` such that the row and column `src`
      *  is moved to `dest`, with intermediate rows and columns shifted to
      *  account for this movement.
      */
-    KERNEL_DECL(square_permute, ::kernelpp::compute_mode::CPU)
+    KERNEL_DECL(square_permute, compute_mode::CPU)
     {
-        template <typename T>
-        static void swap_all_forwards(T* begin, T* end, T* dest)
-        {
-            assert(begin <= end);
-
-            for (; begin != end; begin++, dest++) {
-                T tmp = *begin;
-
-                *begin = *dest;
-                *dest = tmp;
-            }
-        }
-
-        template <typename T>
-        static void swap_all_backwards(T* begin, T* end, T* dest)
-        {
-            assert(begin >= end);
-
-            for (; begin != end; begin--, dest--) {
-                T tmp = *begin;
-
-                *begin = *dest;
-                *dest = tmp;
-            }
-        }
-
-        template <::kernelpp::compute_mode, typename T>
+        template <compute_mode M, typename T>
         static void op(mat_view<T> A, const size_t src, const size_t dest)
         {
+            using rit = std::reverse_iterator<T*>;
             assert(dim<0>(A) == dim<1>(A));
 
             T* ptr = &A(0, 0);
@@ -138,10 +117,10 @@ namespace ss { namespace detail
 
                     if (m >= srci && m < desti) {
                         /* single row rotation */
-                        swap_all_forwards(row, &row[N], &row[N]);
+                        std::rotate(row, &row[N], &row[N + N]);
                     }
                     /* column rotation */
-                    swap_all_forwards(&row[srci], &row[desti], &row[srci + 1]);
+                    std::rotate(&row[srci], &row[srci + 1], &row[desti + 1]);
                 }
             }
             else {
@@ -151,10 +130,10 @@ namespace ss { namespace detail
 
                     if (m <= srci && m > desti) {
                         /* single row rotation */
-                        swap_all_forwards(row, &row[N], &row[-N]);
+                        std::rotate(&row[-N], row, &row[N]);
                     }
                     /* column rotation */
-                    swap_all_backwards(&row[srci], &row[desti], &row[srci - 1]);
+                    std::rotate(rit(&row[srci + 1]), rit(&row[srci]), rit(&row[desti]));
                 }
             }
         }
@@ -163,9 +142,9 @@ namespace ss { namespace detail
     /*  Removes the last row and column from the given matrix
      *  of M rows and N columns
      */
-    KERNEL_DECL(erase_last_rowcol, ::kernelpp::compute_mode::CPU)
+    KERNEL_DECL(erase_last_rowcol, compute_mode::CPU)
     {
-        template <::kernelpp::compute_mode, typename T> static void op(
+        template <compute_mode, typename T> static void op(
             aligned_vector<T>& A, const size_t M, const size_t N)
         {
             assert(A.size() == M * N);
@@ -186,9 +165,9 @@ namespace ss { namespace detail
     /*  Appends a row and column to the given matrix
      *  of M rows and N columns
      */
-    KERNEL_DECL(insert_last_rowcol, ::kernelpp::compute_mode::CPU)
+    KERNEL_DECL(insert_last_rowcol, compute_mode::CPU)
     {
-        template <::kernelpp::compute_mode, typename T> static void op(
+        template <compute_mode, typename T> static void op(
             aligned_vector<T>& A, const size_t M, const size_t N, const T& val)
         {
             assert(A.size() == M * N);
@@ -200,7 +179,7 @@ namespace ss { namespace detail
             for (ptrdiff_t m = M-1; m >= 0; m--)
             {
                 /* fill last column */
-                A[m + i + 1] = val;
+                A[i + m + 1] = val;
 
                 for (const ptrdiff_t start = i - (N-1); start <= i; i--)
                     A[i + m] = A[i];
