@@ -26,6 +26,7 @@ limitations under the License.  */
 #include <cassert>
 #include <algorithm>
 #include <iterator>
+#include <cstring>
 
 namespace ss
 {
@@ -148,14 +149,15 @@ namespace ss { namespace detail
             aligned_vector<T>& A, const size_t M, const size_t N)
         {
             assert(A.size() == M * N);
+            const size_t LEN = (N - 1) * sizeof(T);
 
             /* traversing forwards, shift values left such
              * that the last column of each row is removed */
-            size_t i = N-1;
-            for (size_t m = 1; m < M-1; m++)
+            for (size_t i = 0, dest = 0;
+                 i < N * (M-1);
+                 i += N, dest += N-1)
             {
-                for (const size_t end = i + N-1; i < end; i++)
-                    A[i] = A[i + m];
+                std::memmove(&A[dest], &A[i], LEN);
             }
 
             A.erase(A.end() - (N + M - 1), A.end());
@@ -168,21 +170,24 @@ namespace ss { namespace detail
     KERNEL_DECL(insert_last_rowcol, compute_mode::CPU)
     {
         template <compute_mode, typename T> static void op(
-            aligned_vector<T>& A, const size_t M, const size_t N, const T& val)
+            aligned_vector<T>& A, const size_t M, const size_t N, const T val)
         {
             assert(A.size() == M * N);
+            const size_t LEN = N * sizeof(T);
+
             A.resize(A.size() + N + M + 1, val);
 
-            /* traversing backwards, shift values right such
-             * that a column on each row is inserted */
-            ptrdiff_t i = (M * N) - 1;
-            for (ptrdiff_t m = M-1; m >= 0; m--)
+            /* traversing backwards */
+            for (ptrdiff_t i = (M * N) - N, dest = i + (M-1);
+                 dest >= 0;
+                 dest -= N + 1, i -= N)
             {
-                /* fill last column */
-                A[i + m + 1] = val;
+                /* fill last column on this row */
+                A[dest + N] = val;
 
-                for (const ptrdiff_t start = i - (N-1); start <= i; i--)
-                    A[i + m] = A[i];
+                /* shift values right such that a column
+                   on each row is inserted */
+                std::memmove(&A[dest], &A[i], LEN);
             }
         }
     };
