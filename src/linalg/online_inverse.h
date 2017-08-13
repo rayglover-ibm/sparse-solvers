@@ -219,8 +219,12 @@ namespace ss
         , _n{ 0 }
         , _indices(dim<1>(A), false)
     {
-        _inv.reserve(10 * 10);
-        _A_sub_t.reserve(10 * dim<0>(A));
+        /* lets nievely assume we're interested in at at least 
+           log(n) columns of A */
+        float k = log(dim<1>(A));
+
+        _inv.reserve(k * k);
+        _A_sub_t.reserve(k * dim<0>(A));
     }
 
     template <typename T>
