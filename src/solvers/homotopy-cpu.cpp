@@ -23,6 +23,7 @@ limitations under the License.  */
 #include <limits>
 #include <vector>
 #include <memory>
+#include <tuple>
 #include <assert.h>
 
 namespace ss
@@ -202,7 +203,7 @@ namespace ss
         auto c_gamma   = xt::xtensor<T, 1>::from_shape({ N });
         T    c_inf     = T(0);
 
-        online_column_inverse<T> inv(A);
+        online_column_inverse<T> inv(A.shape());
 
         /* initialise residual vector */
         residual_vector(A, y, x, as_span(c));
@@ -212,7 +213,8 @@ namespace ss
             size_t idx;
             c_inf = inf_norm(as_span(c), &idx);
 
-            inv.insert((uint32_t)idx);
+            auto col = xt::view(A, xt::all(), idx);
+            inv.insert(idx, col.cbegin(), col.cend());
 
             T c_gamma{ c_inf };
             sign(as_span(&c_gamma, { 1 }), tolerance);
@@ -227,15 +229,24 @@ namespace ss
         while (iter < max_iter)
         {
             iter++;
-            auto const gamma = find_max_gamma(A, as_span(c), x,
-                as_span(direction), c_inf, inv.indices());
+            {
+                T min; size_t idx;
 
-            /* update inverse by inserting/removing the
-               respective index from the inverse */
-            inv.flip(gamma.second);
+                std::tie(min, idx) = find_max_gamma(A, as_span(c), x,
+                    as_span(direction), c_inf, inv.indices());
 
-            /* update x */
-            ss::view(x) += gamma.first * direction;
+                /* update inverse by inserting/removing the
+                   respective index from the inverse */
+                if (inv.indices()[idx])
+                    inv.remove(idx);
+                else {
+                    auto col = xt::view(A, xt::all(), idx);
+                    inv.insert(idx, col.cbegin(), col.cend());
+                }
+
+                /* update x */
+                ss::view(x) += min * direction;
+            }
 
             /* update residual vector */
             residual_vector(A, y, x, as_span(c));

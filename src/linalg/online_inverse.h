@@ -30,8 +30,8 @@ limitations under the License.  */
 
 namespace ss
 {
-    /*  Given a non-owning reference to a matrix `A`, maintains
-     *  the inverse of column-wise subset of `A`.
+    /*  Maintains the inverse of column-wise subset of a
+     *  matrix of given shape.
      *
      *  Refer to ./docs/algorithms/online-matrix-inverse for more information
      */
@@ -39,43 +39,36 @@ namespace ss
     class online_column_inverse
     {
       public:
-        online_column_inverse(const mat_view<T>& A);
+        using shape_type = typename mat_view<T>::shape_type;
+
+        online_column_inverse(shape_type shape);
 
         /* returns a view of the inverse */
         const mat_view<T> inverse();
 
-        /*  Inserts a column of `A` in to the inverse. Returns a
-         *  view of the updated inverse.
-         */
-        void insert(const size_t column_idx);
+        /* Inserts a column in to the inverse at the given index. */
+        template <typename It>
+        void insert(const size_t column_idx, It begin, It end);
 
-        /*  Removes a column of `A` from the inverse. Returns a
-         *  view of the updated inverse.
-         */
+        /* Removes the column from the inverse at the given index. */
         void remove(size_t column_idx);
 
-        /*  Inverts the membership of the column at the given
-         *  column index in the inverse. Returns a view of the
-         *  updated inverse.
-         */
-        void flip(const size_t index);
-
-        /* returns the indices of `A` in the inverse */
+        /* returns the indices currently in the inverse */
         const std::vector<bool>& indices() const { return _indices; }
 
-        /* returns the size of the inverse */
+        /* returns the size of the subset */
         const size_t N() { return N; }
 
       private:
         mat_view<T> subset_transposed();
 
-        /*  Returns the index of the column in the inverse currently
-         *  corresponding to the given column index of _A
+        /* Returns the index of the column in the inverse currently
+         * corresponding to the given column index
          */
         size_t insertion_index(size_t column_idx);
 
         /* reference matrix */
-        const mat_view<T> _A;
+        shape_type _shape;
         /* A_gamma transposed */
         aligned_vector<T> _A_sub_t;
         /* the inverse of A_gamma */
@@ -191,55 +184,39 @@ namespace ss { namespace detail
             }
         }
     };
-
-    /*  Inserts a column from A in to a row in v. v is assumed to
-     *  be a matrix with a number of columns equal to the number of
-     *  rows in A.
-     */
-    template <typename T>
-    void insert_col_into_row(
-        aligned_vector<T>& v,
-        const mat_view<T>& A,
-        const size_t src_col,
-        const size_t dest_row
-        )
-    {
-        auto m = dim<0>(A);
-        auto x = xt::view(A, xt::all(), src_col);
-
-        v.insert(v.begin() + (dest_row * m), x.cbegin(), x.cend());
-    }
 }}
 
 namespace ss
 {
     template <typename T>
-    online_column_inverse<T>::online_column_inverse(const mat_view<T>& A)
-        : _A{ A }
+    online_column_inverse<T>::online_column_inverse(shape_type shape)
+        : _shape{ shape }
         , _n{ 0 }
-        , _indices(dim<1>(A), false)
+        , _indices(shape[1], false)
     {
         /* lets nievely assume we're interested in at at least 
            log(n) columns of A */
-        float k = log(dim<1>(A));
+        float k = log(shape[1]);
 
         _inv.reserve(k * k);
-        _A_sub_t.reserve(k * dim<0>(A));
+        _A_sub_t.reserve(k * shape[0]);
     }
 
     template <typename T>
-    void online_column_inverse<T>::insert(const size_t column_idx)
+    template <typename It>
+    void online_column_inverse<T>::insert(const size_t column_idx, It begin, It end)
     {
-        assert(column_idx < dim<1>(_A));
+        assert(column_idx < _shape[1]);
+        assert(std::distance(begin, end) == _shape[0]);
 
         if (_indices[column_idx]) {
             return;
         }
 
-        size_t const M = dim<0>(_A);
+        size_t const M = _shape[0];
         if (_n == 0) {
             /* initialize */
-            detail::insert_col_into_row(_A_sub_t, _A, column_idx, 0);
+            _A_sub_t.insert(_A_sub_t.begin(), begin, end);
 
             T A_gamma_norm{ blas::xnrm2(M, _A_sub_t.data(), 1) };
             T inv_at_A { T(1) / (A_gamma_norm * A_gamma_norm) };
@@ -253,19 +230,22 @@ namespace ss
             auto u1 = std::make_unique<T[]>(_n);
             T vcol_dot = 0;
             {
-                xt::xtensor<T, 1> vcol = xt::view(_A, xt::all(), column_idx);
-                vcol_dot = blas::xdot(vcol.size(), vcol.cbegin(), 1, vcol.cbegin(), 1);
+                /* append the input */
+                auto row = _A_sub_t.insert(_A_sub_t.end(), begin, end);
+                const T* rowptr = std::addressof(*row);
+                
+                vcol_dot = blas::xdot(M, rowptr, 1, rowptr, 1);
 
                 /* current view of A_sub_t */
                 mat_view<T> At = subset_transposed();
 
                 blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0,
                     At.cbegin(), dim<1>(At),
-                    vcol.cbegin(), 1, 0.0,
+                    rowptr, 1, 0.0,
                     u1.get(), 1);
 
-                /* update A_sub_t */
-                detail::insert_col_into_row(_A_sub_t, _A, column_idx, idx);
+                /* move the new row to the new row point */
+                std::rotate(_A_sub_t.begin() + idx * M, row, _A_sub_t.end());
             }
 
             auto u2 = std::make_unique<T[]>(_n);
@@ -309,7 +289,7 @@ namespace ss
     void online_column_inverse<T>::remove(size_t column_idx)
     {
         assert(_n > 0);
-        assert(column_idx < dim<1>(_A));
+        assert(column_idx < _shape[1]);
 
         if (!_indices[column_idx]) {
             return;
@@ -327,8 +307,8 @@ namespace ss
                 size_t idx{ insertion_index(column_idx) };
 
                 /* erase row from the transposed subset */
-                auto it = _A_sub_t.begin() + (idx * dim<0>(_A));
-                _A_sub_t.erase(it, it + dim<0>(_A));
+                auto it = _A_sub_t.begin() + (idx * _shape[0]);
+                _A_sub_t.erase(it, it + _shape[0]);
 
                 /* shift to last column */
                 kernelpp::run<detail::square_permute>(inv, idx, dim<1>(inv) - 1);
@@ -359,16 +339,6 @@ namespace ss
     }
 
     template <typename T>
-    void online_column_inverse<T>::flip(const size_t index)
-    {
-        assert(index < _indices.size());
-        if (_indices[index])
-            remove(index);
-        else
-            insert(index);
-    }
-
-    template <typename T>
     const mat_view<T> online_column_inverse<T>::inverse()
     {
         assert(_inv.size() >= _n * _n);
@@ -378,7 +348,7 @@ namespace ss
     template <typename T>
     size_t online_column_inverse<T>::insertion_index(size_t column_idx)
     {
-        assert(column_idx < dim<1>(_A));
+        assert(column_idx < _shape[1]);
 
         size_t idx{ 0u };
         for (uint32_t i{ 0u }; i < column_idx; ++i) {
@@ -392,7 +362,7 @@ namespace ss
     template <typename T>
     mat_view<T> online_column_inverse<T>::subset_transposed()
     {
-        assert(_A_sub_t.size() >= _n * dim<0>(_A));
-        return as_span<2>(_A_sub_t.data(), { _n, dim<0>(_A) });
+        assert(_A_sub_t.size() >= _n * _shape[0]);
+        return as_span<2>(_A_sub_t.data(), { _n, _shape[0] });
     }
 }
