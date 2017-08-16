@@ -29,11 +29,6 @@ list (APPEND src
     "src/lib.cpp"
     "src/solvers/homotopy-cpu.cpp"
 )
-# if (kernelpp_WITH_AVX)
-#     list (APPEND src
-#         "src/linalg/online_inverse-avx.cpp"
-#     )
-# endif ()
 
 add_library (${ss} STATIC ${src})
 blas_init (${ss} blas_target blas_vendor)
@@ -70,7 +65,6 @@ if (${ss}_WITH_TESTS)
         # note: google test should be enabled by default by kernelpp
         message (SEND_ERROR "Tests could not be built: Google Test not configured correctly.")
     endif ()
-
     add_executable ("${ss}_test"
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"
@@ -95,10 +89,18 @@ endif ()
 
 # -- benches
 if (${ss}_WITH_BENCHES)
-    # note: DownloadProject is a submodule of kernelpp
-    include ("${PROJECT_SOURCE_DIR}/third_party/kernelpp/third_party/DownloadProject/DownloadProject.cmake")
+    # retrieve DownloadProject
+    set (src "https://raw.githubusercontent.com/Crascit/DownloadProject/master")
+    set (dest "${CMAKE_CURRENT_BINARY_DIR}/tmp.DownloadProject")
+
+    foreach (file
+        "DownloadProject.cmake"
+        "DownloadProject.CMakeLists.cmake.in")
+        file (DOWNLOAD "${src}/${file}" "${dest}/${file}" STATUS "retrieving ${file}")
+    endforeach ()
 
     # download Google Benchmark targets
+    include ("${dest}/DownloadProject.cmake")
     download_project (
         PROJ            googlebench
         GIT_REPOSITORY  https://github.com/google/benchmark.git
