@@ -57,7 +57,7 @@ namespace ss
         const std::vector<bool>& indices() const { return _indices; }
 
         /* returns the size of the subset */
-        const size_t N() { return N; }
+        const size_t N() { return _n; }
 
       private:
         mat_view<T> subset_transposed();
@@ -208,10 +208,7 @@ namespace ss
     {
         assert(column_idx < _shape[1]);
         assert(std::distance(begin, end) == _shape[0]);
-
-        if (_indices[column_idx]) {
-            return;
-        }
+        assert(!_indices[column_idx]);
 
         size_t const M = _shape[0];
         if (_n == 0) {
@@ -290,10 +287,7 @@ namespace ss
     {
         assert(_n > 0);
         assert(column_idx < _shape[1]);
-
-        if (!_indices[column_idx]) {
-            return;
-        }
+        assert(_indices[column_idx]);
 
         if (_n == 1) {
             _inv.clear();

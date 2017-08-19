@@ -182,3 +182,37 @@ TEST(online_inverse, insert_last_rowcol)
         }));
     }
 }
+
+TEST(online_inverse, identity)
+{
+    const uint64_t K = 10;
+
+    xt::xtensor<float, 2> A = xt::eye(K);
+    ss::online_column_inverse<float> inv(A.shape());
+
+    uint64_t k=0;
+
+    /* insert */
+    for (; k < K; k++)
+    {
+        auto col = xt::view(A, xt::all(), k);
+        inv.insert(k, col.cbegin(), col.cend());
+
+        xt::xarray<float> b = xt::eye({k + 1u, k + 1u});
+        EXPECT_TRUE(xt::isclose(inv.inverse(), b, 1.0, .0)());
+    }
+
+    k = K-1;
+
+    /* remove */
+    for (; int(k) > 0; k--)
+    {
+        inv.remove(k);
+
+        xt::xarray<float> b = xt::eye({k, k});
+        EXPECT_TRUE(xt::isclose(inv.inverse(), b, 1.0, .0)());
+    }
+
+    inv.remove(0);
+    EXPECT_EQ(0, inv.N());
+}
