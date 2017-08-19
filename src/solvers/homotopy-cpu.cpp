@@ -108,7 +108,7 @@ namespace ss
 
     template<typename T>
     std::pair<T, size_t> find_max_gamma(
-        const mat_view<T>& A,
+        const mat_view<T> A,
         const ndspan<T> c,
         const ndspan<T> x,
         const ndspan<T> direction,
@@ -140,16 +140,21 @@ namespace ss
         size_t idx{ 0u };
 
         /* find the minimum term and its index */
+        auto ldx = std::begin(lambda_indices);
+        auto end = std::end(lambda_indices);
+
         for (size_t i{ 0u }; i < n; i++) {
             const T prev = min;
-            if (lambda_indices.rank_of(i) >= 0) {
+
+            if (ldx != end && *ldx == i) {
                 T minT = -x[i] / direction[i];
                 if (minT > 0.0 && minT < min) {
                     min = minT;
                 }
+                ldx++;
             }
             else {
-                T di_left{ 1.0f - q[i] }, di_right{ 1.0f + q[i] };
+                T di_left{ T(1) - q[i] }, di_right{ T(1) + q[i] };
 
                 if (di_left != 0.0) {
                     T leftT = (c_inf - c[i]) / di_left;
@@ -157,7 +162,6 @@ namespace ss
                         min = leftT;
                     }
                 }
-
                 if (di_right != 0.0) {
                     T rightT = (c_inf + c[i]) / di_right;
                     if (rightT > 0.0 && rightT < min) {
@@ -165,7 +169,6 @@ namespace ss
                     }
                 }
             }
-
             if (prev > min) {
                 /* yield the index of first (left-most)
                    occurance of min */
