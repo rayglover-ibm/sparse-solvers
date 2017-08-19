@@ -30,8 +30,8 @@ limitations under the License.  */
 
 namespace ss
 {
-    /*  Maintains the inverse of column-wise subset of a
-     *  matrix of given shape.
+    /*  Maintains the (A^T * A) inverse of column-wise subset
+     *  of a matrix A.
      *
      *  Refer to ./docs/algorithms/online-matrix-inverse for more information
      */
