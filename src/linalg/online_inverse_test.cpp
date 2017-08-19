@@ -188,7 +188,7 @@ TEST(online_inverse, identity)
     const uint64_t K = 10;
 
     xt::xtensor<float, 2> A = xt::eye(K);
-    ss::online_column_inverse<float> inv(A.shape());
+    ss::online_column_inverse<float> inv(K);
 
     uint64_t k=0;
 

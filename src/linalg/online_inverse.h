@@ -39,9 +39,7 @@ namespace ss
     class online_column_inverse
     {
       public:
-        using shape_type = typename mat_view<T>::shape_type;
-
-        online_column_inverse(shape_type shape);
+        online_column_inverse(size_t m, size_t capacity = 1);
 
         /* returns a view of the inverse */
         const mat_view<T> inverse();
@@ -57,13 +55,13 @@ namespace ss
         const size_t N() { return _n; }
 
       private:
-        /* reference matrix */
-        const shape_type _shape;
         /* A_gamma transposed */
         aligned_vector<T> _A_sub_t;
         /* the inverse of A_gamma */
         aligned_vector<T> _inv;
-        /* number of colunms */
+        /* fixed size of columns in the inverse */
+        size_t _m;
+        /* number of colunms currently in the inverse */
         size_t _n;
     };
 }
@@ -177,16 +175,12 @@ namespace ss { namespace detail
 namespace ss
 {
     template <typename T>
-    online_column_inverse<T>::online_column_inverse(shape_type shape)
-        : _shape{ shape }
+    online_column_inverse<T>::online_column_inverse(size_t m, size_t capacity)
+        : _m{ m }
         , _n{ 0u }
     {
-        /* lets nievely assume we're interested in at at least
-           log(n) columns of A */
-        float k = log(shape[1]);
-
-        _inv.reserve(k * k);
-        _A_sub_t.reserve(k * shape[0]);
+        _inv.reserve(capacity * capacity);
+        _A_sub_t.reserve(capacity * m);
     }
 
     template <typename T>
@@ -196,7 +190,7 @@ namespace ss
         assert(idx <= _n);
         assert(std::distance(begin, end) == _shape[0]);
 
-        const size_t M = _shape[0];
+        const size_t M = _m;
         const size_t n = _n;
 
         if (n == 0) {
@@ -270,7 +264,7 @@ namespace ss
     {
         assert(idx < N());
 
-        const size_t M = _shape[0];
+        const size_t M = _m;
         const size_t n = N();
 
         if (n == 1) {

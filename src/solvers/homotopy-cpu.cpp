@@ -227,7 +227,7 @@ namespace ss
         T    c_inf     = T(0);
 
         rank_index<uint32_t> lambda_indices;
-        online_column_inverse<T> inv(A.shape());
+        online_column_inverse<T> inv(dim<0>(A), size_t(log(N)));
 
         /* initialise residual vector */
         residual_vector(A, y, x, as_span(c));
