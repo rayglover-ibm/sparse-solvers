@@ -17,6 +17,7 @@ limitations under the License.  */
 #include "linalg/common.h"
 #include "linalg/blas_wrapper.h"
 #include "linalg/online_inverse.h"
+#include "linalg/rank_index.h"
 
 #include <cstdint>
 #include <algorithm>
@@ -179,7 +180,26 @@ namespace ss
         return std::make_pair(min, idx);
     }
 
-    template<typename T>
+    template <typename T>
+    void inverse_add_or_remove(
+        const mat_view<T>         A,
+        size_t                    A_col,
+        rank_index<uint32_t>&     lambda_indices,
+        online_column_inverse<T>& inv)
+    {
+        int rank = lambda_indices.rank_of(A_col);
+        if (rank >= 0) {
+            lambda_indices.erase(A_col);
+            inv.remove(rank);
+        }
+        else {
+            rank = lambda_indices.insert(A_col);
+            auto col = xt::view(A, xt::all(), A_col);
+            inv.insert(rank, col.cbegin(), col.cend());
+        }
+    }
+
+    template <typename T>
     homotopy_report run_solver(
         const mat_view<T>& A,
         const std::uint32_t max_iter,
@@ -206,6 +226,7 @@ namespace ss
         auto c_gamma   = xt::xtensor<T, 1>::from_shape({ N });
         T    c_inf     = T(0);
 
+        rank_index<uint32_t> lambda_indices;
         online_column_inverse<T> inv(A.shape());
 
         /* initialise residual vector */
@@ -216,15 +237,14 @@ namespace ss
             size_t idx;
             c_inf = inf_norm(as_span(c), &idx);
 
-            auto col = xt::view(A, xt::all(), idx);
-            inv.insert(idx, col.cbegin(), col.cend());
+            inverse_add_or_remove(A, idx, lambda_indices, inv);
 
             T c_gamma{ c_inf };
             sign(as_span(&c_gamma, { 1 }), tolerance);
 
             /* initialize direction */
             direction[0] = c_gamma * inv.inverse()(0, 0);
-            expand(direction, inv.indices());
+            expand(direction, lambda_indices);
         }
 
         /* evaluate homotopy path segments in iterations */
@@ -236,16 +256,11 @@ namespace ss
                 T min; size_t idx;
 
                 std::tie(min, idx) = find_max_gamma(A, as_span(c), x,
-                    as_span(direction), c_inf, inv.indices());
+                    as_span(direction), c_inf, lambda_indices);
 
                 /* update inverse by inserting/removing the
                    respective index from the inverse */
-                if (inv.indices().rank_of(idx) >= 0)
-                    inv.remove(idx);
-                else {
-                    auto col = xt::view(A, xt::all(), idx);
-                    inv.insert(idx, col.cbegin(), col.cend());
-                }
+                inverse_add_or_remove(A, idx, lambda_indices, inv);
 
                 /* update x */
                 ss::view(x) += min * direction;
@@ -256,10 +271,9 @@ namespace ss
 
             /* update direction vector */
             {
-                const rank_index<uint32_t>& mask = inv.indices();
-                size_t K = mask.size();
+                size_t K = lambda_indices.size();
 
-                vec_subset(c, mask, c_gamma);
+                vec_subset(c, lambda_indices, c_gamma);
                 sign(as_span(c_gamma.begin(), K), tolerance);
 
                 blas::xgemv(CblasRowMajor, CblasNoTrans, K, K, 1.0,
@@ -268,7 +282,7 @@ namespace ss
                     direction.begin(), 1);
 
                 /* expand the direction vector, filling with 0's where mask[i] == false */
-                expand(direction, mask);
+                expand(direction, lambda_indices);
             }
 
             /* find lambda(i.e., infinite norm of residual vector) */

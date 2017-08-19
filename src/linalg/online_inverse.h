@@ -15,7 +15,6 @@ limitations under the License.  */
 
 #include "blas_wrapper.h"
 #include "linalg/common.h"
-#include "linalg/rank_index.h"
 
 #include <ss/ndspan.h>
 #include <xtensor/xview.hpp>
@@ -54,11 +53,8 @@ namespace ss
         /* Removes the column from the inverse at the given index. */
         void remove(size_t column_idx);
 
-        /* returns the indices currently in the inverse */
-        const rank_index<uint32_t> indices() const { return _indices; }
-
         /* returns the size of the subset */
-        const size_t N() { return _indices.size(); }
+        const size_t N() { return _n; }
 
       private:
         /* reference matrix */
@@ -67,8 +63,8 @@ namespace ss
         aligned_vector<T> _A_sub_t;
         /* the inverse of A_gamma */
         aligned_vector<T> _inv;
-        /* column indices of _A corresponding to the inverse */
-        rank_index<uint32_t> _indices;
+        /* number of colunms */
+        size_t _n;
     };
 }
 
@@ -183,7 +179,7 @@ namespace ss
     template <typename T>
     online_column_inverse<T>::online_column_inverse(shape_type shape)
         : _shape{ shape }
-        , _indices()
+        , _n{ 0u }
     {
         /* lets nievely assume we're interested in at at least
            log(n) columns of A */
@@ -195,15 +191,13 @@ namespace ss
 
     template <typename T>
     template <typename It>
-    void online_column_inverse<T>::insert(const size_t column_idx, It begin, It end)
+    void online_column_inverse<T>::insert(const size_t idx, It begin, It end)
     {
-        assert(column_idx < _shape[1]);
-        assert(_indices.rank_of(column_idx) <= 0);
+        assert(idx <= _n);
         assert(std::distance(begin, end) == _shape[0]);
 
-        const size_t M    = _shape[0];
-        const size_t n    = _indices.size();
-        const size_t rank = _indices.insert(column_idx);
+        const size_t M = _shape[0];
+        const size_t n = _n;
 
         if (n == 0) {
             /* initialize */
@@ -233,7 +227,7 @@ namespace ss
                     u1.get(), 1);
 
                 /* move the new row to the new row point */
-                std::rotate(_A_sub_t.begin() + rank * M, row, _A_sub_t.end());
+                std::rotate(_A_sub_t.begin() + idx * M, row, _A_sub_t.end());
             }
 
             auto u2 = std::make_unique<T[]>(n);
@@ -266,15 +260,15 @@ namespace ss
             new_inv(n, n) = d;
 
             /* permute to get the matrix corresponding to original X */
-            kernelpp::run<detail::square_permute>(new_inv, n, rank);
+            kernelpp::run<detail::square_permute>(new_inv, n, idx);
         }
+        _n++;
     }
 
     template <typename T>
-    void online_column_inverse<T>::remove(size_t column_idx)
+    void online_column_inverse<T>::remove(size_t idx)
     {
-        assert(column_idx < _shape[1]);
-        assert(_indices.rank_of(column_idx) >= 0);
+        assert(idx < N());
 
         const size_t M = _shape[0];
         const size_t n = N();
@@ -287,9 +281,6 @@ namespace ss
             /* permute to bring the column at the end in X */
             mat_view<T> inv = as_span<2>(_inv.data(), { n, n });
             {
-                /* calculate column to remove */
-                size_t idx = _indices.rank_of(column_idx);
-
                 /* erase row from the transposed subset */
                 auto it = _A_sub_t.begin() + (idx * M);
                 _A_sub_t.erase(it, it + M);
@@ -317,8 +308,7 @@ namespace ss
                 kernelpp::run<detail::erase_last_rowcol>(_inv, n, n);
             }
         }
-
-        _indices.erase(column_idx);
+        _n--;
     }
 
     template <typename T>
