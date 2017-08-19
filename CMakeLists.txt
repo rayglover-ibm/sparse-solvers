@@ -68,6 +68,7 @@ if (${ss}_WITH_TESTS)
     add_executable ("${ss}_test"
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"
+        "src/linalg/rank_index_test.cpp"
         "src/linalg/online_inverse_test.cpp"
         "src/linalg/norms_test.cpp"
     )
