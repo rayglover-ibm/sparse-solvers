@@ -43,21 +43,17 @@ namespace ss
     }
 
     template<typename T>
-    size_t vec_subset(
+    void vec_subset(
         const xt::xtensor<T, 1>& X,
-        const std::vector<bool>& indices,
+        const rank_index<uint32_t>& indices,
         xt::xtensor<T, 1>& X_subset
         )
     {
-        size_t i{ 0 }, n{ 0 };
-        for (const bool val : indices) {
-            if (val) {
-                X_subset[n] = X[i];
-                ++n;
-            }
-            ++i;
+        size_t n = 0;
+        for (const uint32_t i : indices) {
+            X_subset[n] = X[i];
+            ++n;
         }
-        return n;
     }
 
     template <typename T>
@@ -72,15 +68,19 @@ namespace ss
     template<typename T>
     void expand(
         xt::xtensor<T, 1>& direction,
-        size_t cardinality,
-        const std::vector<bool>& indices
-        )
+        const rank_index<uint32_t>& indices)
     {
-        size_t i = indices.size() - 1, j = cardinality - 1;
+        assert(indices.size() <= dim<0>(direction));
 
-        for (auto it = indices.crbegin(); it != indices.crend(); ++it, --i) {
-            direction[i] = (*it) ? direction[j--] : T(0);
+        int i = dim<0>(direction) - 1,
+            j = indices.size() - 1;
+
+        for (auto it = indices.crbegin(); it != indices.crend(); ++it)
+        {
+            while (i > *it) { direction[i--] = T(0); }
+            direction[i--] = direction[j--];
         }
+        while (i >= 0) { direction[i--] = T(0); }
     }
 
     template<typename T>
@@ -113,7 +113,7 @@ namespace ss
         const ndspan<T> x,
         const ndspan<T> direction,
         const T c_inf,
-        const std::vector<bool>& lambda_indices
+        const rank_index<uint32_t>& lambda_indices
         )
     {
         assert(lambda_indices.size() <= dim<1>(A));
@@ -140,9 +140,9 @@ namespace ss
         size_t idx{ 0u };
 
         /* find the minimum term and its index */
-        for (size_t i{ 0u }; i < lambda_indices.size(); i++) {
+        for (size_t i{ 0u }; i < n; i++) {
             const T prev = min;
-            if (lambda_indices[i]) {
+            if (lambda_indices.rank_of(i) >= 0) {
                 T minT = -x[i] / direction[i];
                 if (minT > 0.0 && minT < min) {
                     min = minT;
@@ -221,7 +221,7 @@ namespace ss
 
             /* initialize direction */
             direction[0] = c_gamma * inv.inverse()(0, 0);
-            expand(direction, 1, inv.indices());
+            expand(direction, inv.indices());
         }
 
         /* evaluate homotopy path segments in iterations */
@@ -237,7 +237,7 @@ namespace ss
 
                 /* update inverse by inserting/removing the
                    respective index from the inverse */
-                if (inv.indices()[idx])
+                if (inv.indices().rank_of(idx) >= 0)
                     inv.remove(idx);
                 else {
                     auto col = xt::view(A, xt::all(), idx);
@@ -253,9 +253,10 @@ namespace ss
 
             /* update direction vector */
             {
-                const std::vector<bool>& mask = inv.indices();
-                const size_t K = vec_subset(c, mask, c_gamma);
+                const rank_index<uint32_t>& mask = inv.indices();
+                size_t K = mask.size();
 
+                vec_subset(c, mask, c_gamma);
                 sign(as_span(c_gamma.begin(), K), tolerance);
 
                 blas::xgemv(CblasRowMajor, CblasNoTrans, K, K, 1.0,
@@ -264,7 +265,7 @@ namespace ss
                     direction.begin(), 1);
 
                 /* expand the direction vector, filling with 0's where mask[i] == false */
-                expand(direction, K, mask);
+                expand(direction, mask);
             }
 
             /* find lambda(i.e., infinite norm of residual vector) */
