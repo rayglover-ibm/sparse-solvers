@@ -188,7 +188,7 @@ namespace ss
     void online_column_inverse<T>::insert(const size_t idx, It begin, It end)
     {
         assert(idx <= _n);
-        assert(std::distance(begin, end) == _shape[0]);
+        assert(std::distance(begin, end) == _m);
 
         const size_t M = _m;
         const size_t n = _n;
