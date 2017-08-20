@@ -60,7 +60,7 @@ namespace ss
         /* the inverse of A_gamma */
         aligned_vector<T> _inv;
         /* fixed size of columns in the inverse */
-        size_t _m;
+        const size_t _m;
         /* number of colunms currently in the inverse */
         size_t _n;
     };
