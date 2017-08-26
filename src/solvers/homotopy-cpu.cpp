@@ -32,7 +32,7 @@ namespace ss
     template<typename T>
     T inf_norm(const ndspan<T> v, size_t* idx)
     {
-        *idx = blas::ixamax(dim<0>(v), v.cbegin(), 1);
+        *idx = blas::ixamax(dim<0>(v), v.storage_cbegin(), 1);
         return std::abs(v[*idx]);
     }
 
@@ -97,14 +97,14 @@ namespace ss
 
         /* A_x = y - A_x */
         blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, -1.0,
-            A.cbegin(), n,
-            x_previous.cbegin(), 1, 1.0,
-            A_x.begin(), 1);
+            A.storage_cbegin(), n,
+            x_previous.storage_cbegin(), 1, 1.0,
+            A_x.storage_begin(), 1);
 
         blas::xgemv(CblasRowMajor, CblasTrans, m, n, 1.0,
-            A.cbegin(), n,
-            A_x.cbegin() /* difference */, 1, 0.0,
-            c.begin(), 1);
+            A.storage_cbegin(), n,
+            A_x.storage_cbegin() /* difference */, 1, 0.0,
+            c.storage_begin(), 1);
     }
 
     template<typename T>
@@ -125,16 +125,16 @@ namespace ss
         /* p = Ad */
         auto p = xt::xtensor<T, 1>::from_shape({ m });
         blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0,
-            A.cbegin(), n,
-            direction.cbegin(), 1, 0.0,
-            p.begin(), 1);
+            A.storage_cbegin(), n,
+            direction.storage_cbegin(), 1, 0.0,
+            p.storage_begin(), 1);
 
         /* q = transpose(A) p */
         auto q = xt::xtensor<T, 1>::from_shape({ n });
         blas::xgemv(CblasRowMajor, CblasTrans, m, n, 1.0,
-            A.cbegin(), n,
-            p.cbegin(), 1, 0.0,
-            q.begin(), 1);
+            A.storage_cbegin(), n,
+            p.storage_cbegin(), 1, 0.0,
+            q.storage_begin(), 1);
 
         /* evaluate the competing lists of terms */
         T min{ std::numeric_limits<T>::max() };
@@ -195,7 +195,7 @@ namespace ss
         else {
             rank = lambda_indices.insert(A_col);
             auto col = xt::view(A, xt::all(), A_col);
-            inv.insert(rank, col.cbegin(), col.cend());
+            inv.insert(rank, col.storage_cbegin(), col.cend());
         }
     }
 
@@ -274,12 +274,12 @@ namespace ss
                 size_t K = lambda_indices.size();
 
                 vec_subset(c, lambda_indices, c_gamma);
-                sign(as_span(c_gamma.begin(), K), tolerance);
+                sign(as_span(c_gamma.storage_begin(), K), tolerance);
 
                 blas::xgemv(CblasRowMajor, CblasNoTrans, K, K, 1.0,
-                    inv.inverse().cbegin(), K,
-                    c_gamma.begin(), 1, 0.0,
-                    direction.begin(), 1);
+                    inv.inverse().storage_cbegin(), K,
+                    c_gamma.storage_begin(), 1, 0.0,
+                    direction.storage_begin(), 1);
 
                 /* expand the direction vector, filling with 0's where mask[i] == false */
                 expand(direction, lambda_indices);

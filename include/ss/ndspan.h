@@ -27,10 +27,27 @@ namespace ss
      */
     template <typename T, size_t NDim = 1>
     using ndspan = xt::xtensor_adaptor<
-        xt::xbuffer_adaptor<T>, NDim, xt::layout_type::row_major
+        xt::xbuffer_adaptor<T>, NDim, xt::layout_type::dynamic
         >;
 
     /* as_span ------------------------------------------------------------- */
+
+    namespace detail
+    {
+        template <typename T, size_t N>
+        auto adapt(T* data, size_t len, std::array<size_t, N> shape)
+        {
+            return xt::xadapt<T*, N, xt::no_ownership, xt::layout_type::dynamic>(
+                data, len, xt::no_ownership(), shape, xt::layout_type::row_major);
+        }
+
+        template <typename T, size_t N>
+        auto adapt(T* data, size_t len, std::array<size_t, N> shape, std::array<size_t, N> strides)
+        {
+            return xt::xadapt<T*, N, xt::no_ownership>(
+                data, len, xt::no_ownership(), shape, strides);
+        }
+    }
 
     /*
      *  constructs a 1-d non-owning view of an stl-like container
@@ -44,8 +61,7 @@ namespace ss
         auto* buf = container.data();
         size_t len = container.size();
 
-        return xt::xadapt(buf, len, xt::no_ownership(), std::array<size_t, 1>{ len },
-            xt::layout_type::row_major);
+        return detail::adapt(buf, len, std::array<size_t, 1>{ len });
     }
 
     /*
@@ -58,8 +74,7 @@ namespace ss
         auto* buf = container.data();
         size_t len = container.size();
 
-        return xt::xadapt(buf, len, xt::no_ownership(), shape,
-            xt::layout_type::row_major);
+        return detail::adapt(buf, len, shape);
     }
 
     /*
@@ -68,8 +83,7 @@ namespace ss
     template <typename T>
     ndspan<T, 1> as_span(T* buf, size_t len)
     {
-        return xt::xadapt(buf, len, xt::no_ownership(), std::array<size_t, 1>{ len },
-            xt::layout_type::row_major);
+        return detail::adapt(buf, len, std::array<size_t, 1>{ len });
     }
 
     /*
@@ -82,14 +96,33 @@ namespace ss
         size_t len = shape[0];
         for (size_t j=1; j < N; j++) len *= shape[j];
 
-        return xt::xadapt(buf, len, xt::no_ownership(), shape,
-            xt::layout_type::row_major);
+        return detail::adapt(buf, len, shape);
     }
 
     template <size_t N, typename T>
     const ndspan<T, N> as_span(const T* buf, std::array<size_t, N> shape)
     {
         return as_span<N, T>(const_cast<float*>(buf), shape);
+    }
+
+    /*
+     *  constructs a n-d non-owning view of the given shape
+     *  and associated per-dimension strides of an (ptr, len)
+     *  representation.
+     */
+    template <size_t N, typename T>
+    ndspan<T, N> as_span(T* buf, std::array<size_t, N> shape, std::array<size_t, N> strides)
+    {
+        size_t len = shape[0];
+        for (size_t j=1; j < N; j++) len *= shape[j];
+
+        return detail::adapt(buf, len, shape, strides);
+    }
+
+    template <size_t N, typename T>
+    const ndspan<T, N> as_span(const T* buf, std::array<size_t, N> shape, std::array<size_t, N> strides)
+    {
+        return as_span<N, T>(const_cast<float*>(buf), shape, strides);
     }
 
     /*
@@ -104,8 +137,7 @@ namespace ss
         auto* buf = t.raw_data() + t.raw_data_offset();
         size_t len = t.size();
 
-        return xt::xadapt(buf, len, xt::no_ownership(), t.shape(),
-            xt::layout_type::row_major);
+        return detail::adapt(buf, len, t.shape());
     }
 
     /* view ---------------------------------------------------------------- */

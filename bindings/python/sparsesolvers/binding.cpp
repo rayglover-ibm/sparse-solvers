@@ -11,16 +11,32 @@ namespace py = pybind11;
 
 namespace ss
 {
+    template <typename T>
+    inline bool is_c_contiguous(py::array_t<T>& arr)
+    {
+        return py::detail::npy_api::NPY_ARRAY_C_CONTIGUOUS_ ==
+            (arr.flags() & py::detail::npy_api::NPY_ARRAY_C_CONTIGUOUS_);
+    }
+
     template <size_t N, typename T>
-    inline ss::ndspan<T, N> as_span(py::array_t<T, py::array::c_style>& arr)
+    inline ss::ndspan<T, N> as_span(py::array_t<T>& arr)
     {
         if (arr.ndim() != N) throw std::runtime_error(
             "Unexpected number of dimensions. Expected " + std::to_string(N) + " but got " + std::to_string(arr.ndim()));
 
-        std::array<size_t, N> shape;
-        for (size_t d = 0; d < N; d++) shape[d] = arr.shape(d);
+        if (!is_c_contiguous(arr)) throw std::runtime_error(
+            "Input must be contiguous");
 
-        return ss::as_span<N, T>(arr.mutable_data(), shape);
+        std::array<size_t, N> shape;
+        std::array<size_t, N> strides;
+
+        for (size_t d = 0; d < N; d++)
+        {
+            shape[d] = arr.shape(d);
+            strides[d] = arr.strides(d) / sizeof(T);
+        }
+
+        return ss::as_span<N, T>(arr.mutable_data(), shape, strides);
     }
 }
 
@@ -56,12 +72,12 @@ namespace builders
     {
         solver.def("solve",
             [](ss::homotopy& solver,
-               py::array_t<T, py::array::c_style> A,
-               py::array_t<T, py::array::c_style> b,
+               py::array_t<T> A,
+               py::array_t<T> b,
                T tol = std::numeric_limits<T>::epsilon() * 10,
                uint32_t maxiter = 100)
             {
-                auto x = py::array_t<T, py::array::c_style>(A.shape(1));
+                auto x = py::array_t<T>(A.shape(1));
                 kernelpp::maybe<ss::homotopy_report> result = solver.solve(
                     ss::as_span<2>(A), ss::as_span<1>(b), tol, maxiter, ss::as_span<1>(x));
 

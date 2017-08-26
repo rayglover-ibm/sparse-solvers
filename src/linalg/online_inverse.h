@@ -216,7 +216,7 @@ namespace ss
                 /* current view of A_sub_t */
                 mat_view<T> At = as_span<2>(_A_sub_t.data(), { n, M });
                 blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0,
-                    At.cbegin(), dim<1>(At),
+                    At.storage_cbegin(), dim<1>(At),
                     rowptr, 1, 0.0,
                     u1.get(), 1);
 

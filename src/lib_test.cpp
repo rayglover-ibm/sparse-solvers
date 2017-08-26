@@ -1,4 +1,4 @@
-#include "ss/ndspan.h"
+#include <ss/ndspan.h>
 
 #include <xtensor/xbuilder.hpp>
 #include <xtensor/xeval.hpp>
@@ -31,10 +31,37 @@ TEST(ndspan, 1d_constructors)
     EXPECT_EQ(data.size(), spanA.shape()[0]);
     EXPECT_EQ(data[1], spanA(1));
 
-    ss::ndspan<float> spanB{{ &data[4], 1}, { 1 }};
+    ss::ndspan<float> spanB{{ &data[4], 1 }, { 1 }};
 
     EXPECT_EQ(1, spanB.shape()[0]);
     EXPECT_EQ(spanB(0), 5);
+}
+
+TEST(ndspan, strides)
+{
+    std::array<float, 9> data{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+    {
+        /* full strides */
+        auto span = ss::as_span<2>(data.data(), { 3, 3 }, { 3, 1 });
+        EXPECT_EQ(9, span.size());
+    }
+    {
+        /* row spans */
+        auto span = ss::as_span<2>(data.data(), { 3, 2 }, { 3, 2 });
+        xt::xtensor<float, 2> expect {{1, 3}, {4, 6}, {7, 9}};
+
+        EXPECT_EQ(6, span.size());
+        EXPECT_EQ(expect, span);
+    }
+    {
+        /* row and column spans */
+        auto span = ss::as_span<2>(data.data(), { 2, 2 }, { 6, 2 });
+        xt::xtensor<float, 2> expect {{1, 3}, {7, 9}};
+
+        EXPECT_EQ(4, span.size());
+        EXPECT_EQ(expect, span);
+    }
 }
 
 TEST(ndspan, xtensor_compatibility)
@@ -50,6 +77,5 @@ TEST(ndspan, xtensor_compatibility)
     EXPECT_EQ(4, spanA(3, 3));
 
     xt::noalias(spanA) = xt::ones<float>({ 4u, 4u });
-
     EXPECT_EQ(1, spanA(3, 3));
 }

@@ -56,9 +56,9 @@ namespace ss
             size_t m = dim<0>(A), n = dim<1>(A);
 
             blas::xgemv(CblasRowMajor, CblasNoTrans, m, n, 1.0,
-                A.cbegin(), n,
-                x.cbegin(), 1, 0.0,
-                y.begin(), 1);
+                A.storage_cbegin(), n,
+                x.storage_cbegin(), 1, 0.0,
+                y.storage_begin(), 1);
         }
     }
 
