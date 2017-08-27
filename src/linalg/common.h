@@ -14,7 +14,9 @@ limitations under the License.  */
 #pragma once
 
 #include "ss/ndspan.h"
+
 #include <xsimd/xsimd.hpp>
+#include <algorithm>
 
 namespace ss
 {
@@ -26,6 +28,9 @@ namespace ss
 
     template <size_t D, typename M>
     size_t dim(const M& mat) { return mat.shape()[D]; }
+
+    template <size_t D, typename M>
+    size_t stride(const M& mat) { return mat.strides()[D]; }
 
     template <typename T>
     using aligned_vector = std::vector<T, xsimd::aligned_allocator<T, XSIMD_DEFAULT_ALIGNMENT>>;
