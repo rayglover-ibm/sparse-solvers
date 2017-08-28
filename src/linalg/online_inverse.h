@@ -226,7 +226,7 @@ namespace ss
 
             xt::xtensor<T, 1> u2({ n }, xt::layout_type::row_major);
 
-            blas::xgemv<T>(CblasNoTrans, 1.0, inverse()),
+            blas::xgemv<T>(CblasNoTrans, 1.0, inverse(),
                 as_span(u1), 0.0, as_span(u2));
 
             /* update existing inverse */
@@ -237,7 +237,7 @@ namespace ss
             kernelpp::run<detail::insert_last_rowcol>(_inv, n, n, T(0));
             auto new_inv = as_span<2>(_inv.data(), { n + 1, n + 1 });
 
-            /* assign the bottom row/right-most column */
+            /* assign the bottom row/right-most column with -d * u2 */
             for (size_t i{ 0 }; i < n; ++i)
             {
                 T u3{ -d * u2(i) };
@@ -269,7 +269,7 @@ namespace ss
         }
         else {
             /* permute to bring the column at the end in X */
-            mat_view<T> inv = as_span<2>(_inv.data(), { n, n });
+            auto inv = inverse();
 
             {   /* erase row from the transposed subset */
                 auto it = _At.begin() + (idx * m);
@@ -291,7 +291,7 @@ namespace ss
                 &inv(0, n - 1), n,
                 &inv(0, 0),     n);
 
-            /* resize and assign */
+            /* remove the last row/col */
             kernelpp::run<detail::erase_last_rowcol>(_inv, n, n);
         }
         _n--;
