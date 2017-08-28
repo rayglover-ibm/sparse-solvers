@@ -26,6 +26,9 @@ namespace
             EXPECT_LE(r.solution_error, tolerance);
         }
     }
+
+    template <size_t D, typename M>
+    size_t dim(const M& mat) { return mat.shape()[D]; }
 }
 
 TEST(homotopy, smoke_test)
@@ -59,10 +62,50 @@ TEST(homotopy, smoke_test)
     }
 }
 
+TEST(homotopy, smoke_test_column_subset)
+{
+    const int N = 10;
+    const int M = 5;
+
+    xt::random::seed(0);
+
+    xtensor<float, 2> data = xt::zeros<float>({ M, N });
+
+    /* columns 0-4 */
+    auto noise    = xt::view(data, xt::all(), xt::range(0, M-1));
+    /* columns 5-9 */
+    auto identity = xt::view(data, xt::all(), xt::range(M, N));
+
+    /* insert noise in the columns were not interested */
+    noise = xt::random::rand(noise.shape(), 0.0f, 0.1f);
+    /* insert identity in the columns we are interested */
+    identity = xt::eye(M);
+
+    xtensor<float, 1> signal = xt::zeros<float>({ M });
+    xtensor<float, 1> x      = xt::zeros<float>({ M });
+
+    ss::homotopy solver;
+
+    /* for each column we are interested in */
+    for (uint32_t n = 0; n < dim<1>(identity); n++)
+    {
+        /* construct inputs */
+        ss::view(signal) = xt::view(identity, xt::all(), n);
+        ss::view(x) = 0.0f;
+
+        auto result = solver.solve(
+            as_span(identity), as_span(signal), .001f, N, as_span(x));
+
+        EXPECT_EQ(x, signal);
+    }
+}
+
 TEST(homotopy, noisy_signal)
 {
     const uint32_t N = 50;
     const float NOISE = 0.01f;
+
+    xt::random::seed(0);
 
     xtensor<float, 2> identity = xt::eye(N);
     xtensor<float, 1> signal   = xt::zeros<float>({N});
@@ -100,7 +143,9 @@ TEST(homotopy, noisy_patterns)
 {
     const uint32_t M = 25, N = 100;
     const int PATTERN = 3;
-    const float TOL = 0.115f;
+    const float TOL = 0.1f;
+
+    xt::random::seed(0);
 
     /* make some noise */
     xtensor<float, 2> haystack = xt::random::randn({ M, N }, .5f, .1f);
@@ -139,7 +184,7 @@ TEST(homotopy, noisy_patterns)
         }
         {
             /* reconstruct the signal given the sparse representation */
-            xt::xtensor<float, 1> y = xt::zeros<float>({ M });
+            xtensor<float, 1> y = xt::zeros<float>({ M });
             ss::reconstruct_signal(as_span(haystack), as_span(x), as_span(y));
 
             if (!xt::isclose(x, y, 1.0 /* relative */, TOL /* absolute */)()) {
