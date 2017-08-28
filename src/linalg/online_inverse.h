@@ -56,7 +56,7 @@ namespace ss
 
       private:
         /* A_gamma transposed */
-        aligned_vector<T> _A_sub_t;
+        aligned_vector<T> _At;
         /* the inverse of A_gamma */
         aligned_vector<T> _inv;
         /* fixed size of columns in the inverse */
@@ -180,7 +180,7 @@ namespace ss
         , _n{ 0u }
     {
         _inv.reserve(capacity * capacity);
-        _A_sub_t.reserve(capacity * m);
+        _At.reserve(capacity * m);
     }
 
     template <typename T>
@@ -190,61 +190,57 @@ namespace ss
         assert(idx <= _n);
         assert(std::distance(begin, end) == _m);
 
-        const size_t M = _m;
+        const size_t m = _m;
         const size_t n = _n;
 
         if (n == 0) {
             /* initialize */
-            _A_sub_t.insert(_A_sub_t.begin(), begin, end);
+            _At.insert(_At.begin(), begin, end);
 
-            T A_gamma_norm{ blas::xnrm2(M, _A_sub_t.data(), 1) };
+            T A_gamma_norm{ blas::xnrm2(m, _At.data(), 1) };
             T inv_at_A { T(1) / (A_gamma_norm * A_gamma_norm) };
 
             _inv.push_back(inv_at_A);
         }
         else {
             /* compute the inverse as if adding a column to the end */
-            auto u1 = std::make_unique<T[]>(n);
-            T vcol_dot = 0;
+            xt::xtensor<T, 1> u1({ n }, xt::layout_type::row_major);
+
+            T dot = 0;
             {
                 /* append the input */
-                auto row = _A_sub_t.insert(_A_sub_t.end(), begin, end);
-                const T* rowptr = std::addressof(*row);
+                auto row = _At.insert(_At.end(), begin, end);
 
-                vcol_dot = blas::xdot(M, rowptr, 1, rowptr, 1);
+                /* dot product of the new row */
+                auto row_span = as_span(std::addressof(*row), m);
 
                 /* current view of A_sub_t */
-                mat_view<T> At = as_span<2>(_A_sub_t.data(), { n, M });
-                blas::xgemv(CblasRowMajor, CblasNoTrans, dim<0>(At), dim<1>(At), 1.0,
-                    At.storage_cbegin(), dim<1>(At),
-                    rowptr, 1, 0.0,
-                    u1.get(), 1);
+                auto At = as_span<2>(_At.data(), { n, m });
+
+                dot = blas::xdot(row_span, row_span);
+                blas::xgemv<T>(CblasNoTrans, 1.0, At, row_span, 0.0, as_span(u1));
 
                 /* move the new row to the new row point */
-                std::rotate(_A_sub_t.begin() + idx * M, row, _A_sub_t.end());
+                std::rotate(_At.begin() + idx * m, row, _At.end());
             }
 
-            auto u2 = std::make_unique<T[]>(n);
-            blas::xgemv(CblasRowMajor, CblasNoTrans, n, n, 1.0,
-                _inv.data(), n,
-                u1.get(), 1, 0.0,
-                u2.get(), 1);
+            xt::xtensor<T, 1> u2({ n }, xt::layout_type::row_major);
 
-            T d = T(1) / (vcol_dot - blas::xdot(n, u1.get(), 1, u2.get(), 1));
+            blas::xgemv<T>(CblasNoTrans, 1.0, inverse()),
+                as_span(u1), 0.0, as_span(u2));
 
+            /* update existing inverse */
+            T d = T(1) / (dot - blas::xdot(as_span(u1), as_span(u2)));
+            blas::xger(d, as_span(u2), as_span(u2), inverse());
+
+            /* make space in the inverse */
             kernelpp::run<detail::insert_last_rowcol>(_inv, n, n, T(0));
-            const size_t new_n = n + 1;
+            auto new_inv = as_span<2>(_inv.data(), { n + 1, n + 1 });
 
-            blas::xger(CblasRowMajor, n, n, d,
-                u2.get(), 1,
-                u2.get(), 1,
-                _inv.data(), new_n);
-
-            auto new_inv = as_span<2>(_inv.data(), { new_n, new_n });
-            /* assign u3 to bottom row/right-most column */
+            /* assign the bottom row/right-most column */
             for (size_t i{ 0 }; i < n; ++i)
             {
-                T u3{ -d * u2[i] };
+                T u3{ -d * u2(i) };
 
                 new_inv(i, n) = u3;
                 new_inv(n, i) = u3;
@@ -264,43 +260,39 @@ namespace ss
     {
         assert(idx < N());
 
-        const size_t M = _m;
-        const size_t n = N();
+        const size_t m = _m;
+        const size_t n = _n;
 
         if (n == 1) {
             _inv.clear();
-            _A_sub_t.clear();
+            _At.clear();
         }
         else {
             /* permute to bring the column at the end in X */
             mat_view<T> inv = as_span<2>(_inv.data(), { n, n });
-            {
-                /* erase row from the transposed subset */
-                auto it = _A_sub_t.begin() + (idx * M);
-                _A_sub_t.erase(it, it + M);
 
-                /* shift to last column */
-                kernelpp::run<detail::square_permute>(inv, idx, dim<1>(inv) - 1);
+            {   /* erase row from the transposed subset */
+                auto it = _At.begin() + (idx * m);
+                _At.erase(it, it + m);
             }
+
+            /* shift to last column */
+            kernelpp::run<detail::square_permute>(inv, idx, dim<1>(inv) - 1);
 
             /* update the inverse by removing the last column */
-            {
-                const size_t new_n = n - 1;
-                T d = inv(new_n, new_n);
+            T d = inv(n - 1, n - 1);
+            blas::xscal(n - 1, -(T(1) / d), &inv(0, n - 1), n);
 
-                blas::xscal(new_n, -(T(1) / d), &inv(0, new_n), n);
+            /* A := alpha*x*y**T + A
+                note: A - d * x == -d * x + A
+             */
+            blas::xger(CblasRowMajor, n - 1, n - 1, -d,
+                &inv(0, n - 1), n,
+                &inv(0, n - 1), n,
+                &inv(0, 0),     n);
 
-                /* A := alpha*x*y**T + A
-                   note: A - d * x == -d * x + A
-                 */
-                blas::xger(CblasRowMajor, new_n, new_n, -d,
-                    &inv(0, new_n), n,
-                    &inv(0, new_n), n,
-                    &inv(0, 0),     n);
-
-                /* resize and assign */
-                kernelpp::run<detail::erase_last_rowcol>(_inv, n, n);
-            }
+            /* resize and assign */
+            kernelpp::run<detail::erase_last_rowcol>(_inv, n, n);
         }
         _n--;
     }

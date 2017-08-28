@@ -86,6 +86,12 @@ namespace ss
         return detail::adapt(buf, len, std::array<size_t, 1>{ len });
     }
 
+    template <typename T>
+    const ndspan<T, 1> as_span(const T* buf, size_t len)
+    {
+        return as_span<T>(const_cast<T*>(buf), len);
+    }
+
     /*
      *  constructs a n-d non-owning view of the given shape
      *  of an (ptr, len) representation.
@@ -102,7 +108,7 @@ namespace ss
     template <size_t N, typename T>
     const ndspan<T, N> as_span(const T* buf, std::array<size_t, N> shape)
     {
-        return as_span<N, T>(const_cast<float*>(buf), shape);
+        return as_span<N, T>(const_cast<T*>(buf), shape);
     }
 
     /*
@@ -122,7 +128,7 @@ namespace ss
     template <size_t N, typename T>
     const ndspan<T, N> as_span(const T* buf, std::array<size_t, N> shape, std::array<size_t, N> strides)
     {
-        return as_span<N, T>(const_cast<float*>(buf), shape, strides);
+        return as_span<N, T>(const_cast<T*>(buf), shape, strides);
     }
 
     /*
@@ -137,7 +143,7 @@ namespace ss
         auto* buf = t.raw_data() + t.raw_data_offset();
         size_t len = t.size();
 
-        return detail::adapt(buf, len, t.shape());
+        return detail::adapt(buf, len, t.shape(), t.strides());
     }
 
     /* view ---------------------------------------------------------------- */
