@@ -24,9 +24,6 @@ namespace ss
         if (arr.ndim() != N) throw std::runtime_error(
             "Unexpected number of dimensions. Expected " + std::to_string(N) + " but got " + std::to_string(arr.ndim()));
 
-        if (!is_c_contiguous(arr)) throw std::runtime_error(
-            "Input must be contiguous");
-
         std::array<size_t, N> shape;
         std::array<size_t, N> strides;
 
