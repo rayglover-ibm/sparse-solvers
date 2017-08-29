@@ -35,6 +35,11 @@ namespace blas
         }
 
         template <typename T>
+        CBLAS_ORDER order(const ndspan<T, 2>& view) {
+            return (stride<0>(view) == 1) ? CblasColMajor : CblasRowMajor;
+        }
+
+        template <typename T>
         size_t leading_stride(const ndspan<T, 1>& view) {
             return std::max(size_t(1), stride<0>(view));
         }
@@ -42,8 +47,13 @@ namespace blas
         template <typename T>
         size_t leading_stride(const ndspan<T, 2>& view)
         {
-            assert(stride<1>(view) <= 1);
-            return std::max(dim<1>(view), stride<0>(view));
+            /* xtensor strides are not fully compatible with cblas. Here we
+               ensure the stride is at least equal to n when row-major, or m
+               when col-major. */
+            if (order<T>(view) == CblasRowMajor)
+                return std::max(dim<1>(view), stride<0>(view));
+            else
+                return std::max(dim<0>(view), stride<1>(view));
         }
     }
 
@@ -88,7 +98,7 @@ namespace blas
     {
         using namespace detail;
 
-        xgemv(CblasRowMajor, trans, dim<0>(a), dim<1>(a), alpha,
+        xgemv(order(a), trans, dim<0>(a), dim<1>(a), alpha,
             data(a), leading_stride(a),
             data(x), leading_stride(x), beta,
             data(y), leading_stride(y));
@@ -121,7 +131,7 @@ namespace blas
     {
         using namespace detail;
 
-        xger(CblasRowMajor, dim<0>(A), dim<1>(A), alpha,
+        xger(order(A), dim<0>(A), dim<1>(A), alpha,
             data(x), leading_stride(x),
             data(y), leading_stride(y),
             data(A), leading_stride(A));
