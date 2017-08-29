@@ -57,6 +57,18 @@ class HomotopySolverTest(unittest.TestCase):
         assert len(x) == 3
         assert np.argmax(x) == 1
 
+    def test_transpose(self):
+        '''test a transposed input'''
+
+        A = np.random.rand(5, 10) * 0.1
+        A[3, :] = 1 # needle to find as a row
+
+        signal = np.ones(10)
+        x, info = ss.Homotopy().solve(A.T, signal)
+
+        assert len(x) == 5
+        assert np.argmax(x) == 3
+
 
 if __name__ == '__main__':
     print("[sparsesolvers] version={}".format(ss.version()))
