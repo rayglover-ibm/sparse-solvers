@@ -48,6 +48,10 @@ target_include_directories (${ss}
 )
 target_link_libraries (${ss} PUBLIC kernelpp)
 
+# -- general compiler/linker settings
+target_compile_options (${ss} PUBLIC
+    $<$<CONFIG:Debug>:-g -DXTENSOR_ENABLE_ASSERT>
+)
 # -- compiler/linker specifics (clang/gcc)
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options (${ss} PUBLIC
@@ -76,9 +80,6 @@ if (${ss}_WITH_TESTS)
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
-    target_compile_definitions ("${ss}_test" PUBLIC XTENSOR_ENABLE_ASSERT=ON)
-    target_compile_options ("${ss}_test" PUBLIC -g)
-
     copy_target_files (${ss}_test ${ss})
 
     enable_testing ()
