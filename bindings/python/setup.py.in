@@ -4,19 +4,19 @@ from setuptools import setup
 from distutils.dist import Distribution
 
 class CMakeDistribution(Distribution):
+    """Distribution which always forces a binary package with platform name"""
     def has_ext_modules(self):
-        # override, because ext modules are built by cmake,
-        # not setuputils
         return True
 
 setup(
     name = '${ss}',
     packages = ['${ss}'],
+    install_requires = ['numpy>=0.10'],
 
     include_package_data = True,
     package_data = {
         # If any package contains *.<ext> , include them:
-        '': ['*.pyd', '*.dll'] if 'win' in sys.platform else ['*.so', '*.dynlib']
+        '${ss}': ['*.pyd', '*.dll'] if 'win' in sys.platform else ['*.so', '*.dynlib']
     },
 
     version     = '${PROJECT_VERSION}',
@@ -32,8 +32,7 @@ setup(
         },
     },
 
-    distclass=CMakeDistribution,
-
+    distclass = CMakeDistribution,
     zip_safe = False,
 
     test_suite='nose.collector',

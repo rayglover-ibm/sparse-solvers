@@ -23,9 +23,6 @@ At a minimum, you will need:
     |:----------:|:----------------------|:----------|
     | VS 2015    | gcc 5.3 / clang 3.6   | XCode 7.3 |
 
-### Python Package (optional)
-
-To build the python package you will need the relevant Python development package, such as `python-dev` for Debian/Ubuntu. For Windows/Mac I recommend [Conda](https://conda.io/miniconda.html).
 
 ### Build
 
@@ -34,7 +31,7 @@ Build using CMake in the typical way:
 ```bash
 > mkdir build && cd build
 > cmake ..
-> cmake --build . --config Release
+> cmake --build . [--config Release]
 ```
 
 There are a number of _sparse-solvers_ specific CMake options:
@@ -51,6 +48,22 @@ Lastly, you might find some of these CMake options useful; I've included them he
 |----------------------------|:-----------------------|:--------|
 | `OpenBLAS_microarch`       | OpenBLAS CPU microarchitecture to use | NEHALEM |
 | `PYTHON_EXECUTABLE:FILEPATH=<path-to-python-executable>` | Override the python location | <small>System specific</small> |
+
+### Build – Python Package
+
+To build the python package (`.whl`) you will need the relevant Python development package, such as `python-dev` for Debian/Ubuntu. For Windows/Mac I recommend [Conda](https://conda.io/miniconda.html). To build the wheel:
+
+```bash
+> mkdir build-py && cd build-py
+> cmake -Dsparsesolvers_WITH_PYTHON=ON ..
+> cmake --build . --target bdist_wheel [--config Release]
+```
+
+Once the wheel has been created (usually in `build-py/bindings/python/dist`) you can install it with `pip` locally in the usual way:
+
+```bash
+> pip install <path/to/sparsesolvers.whl>
+```
 
 ### Tests / Benchmarks
 
