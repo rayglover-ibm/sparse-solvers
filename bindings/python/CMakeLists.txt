@@ -4,7 +4,6 @@ cmake_minimum_required (VERSION 3.1)
 set (binding "py")
 
 project ("${ss}-${binding}" VERSION "${PROJECT_VERSION}")
-
 set (src "${ss}/binding.cpp")
 
 pybind11_add_module (${binding} ${src})
@@ -14,6 +13,8 @@ copy_target_files (${binding} ${ss})
 set_target_properties (${binding} PROPERTIES 
     OUTPUT_NAME "binding"
     LIBRARY_OUTPUT_DIRECTORY "${ss}"
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN/"
 )
 foreach (config ${CMAKE_CONFIGURATION_TYPES})
     string (TOUPPER ${config} config)

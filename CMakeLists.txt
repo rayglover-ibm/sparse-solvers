@@ -37,16 +37,19 @@ configure_file (
     "include/ss/ss_config.h.in"
     "include/ss/ss_config.h"
 )
-
 target_include_directories (${ss}
     PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include"
             "${CMAKE_CURRENT_BINARY_DIR}/include"
             "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xtensor/include"
             "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xsimd/include"
             "$<TARGET_PROPERTY:kernelpp,INTERFACE_INCLUDE_DIRECTORIES>"
+            "$<TARGET_PROPERTY:${blas_target},INTERFACE_INCLUDE_DIRECTORIES>"
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
-target_link_libraries (${ss} PUBLIC kernelpp)
+target_link_libraries (${ss} PUBLIC kernelpp ${blas_target})
+set_target_properties (${ss} PROPERTIES
+    REQUIRED_RUNTIME_FILES ${blas_target}
+)
 
 # -- general compiler/linker settings
 target_compile_options (${ss} PUBLIC
@@ -80,7 +83,6 @@ if (${ss}_WITH_TESTS)
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
-    copy_target_files (${ss}_test ${ss})
 
     enable_testing ()
     add_test (

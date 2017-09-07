@@ -1,23 +1,21 @@
-define_property(TARGET
+define_property (TARGET
     PROPERTY REQUIRED_RUNTIME_FILES
-    BRIEF_DOCS "Runtime taget files required for this target"
-    FULL_DOCS "Runtime taget files required for this target"
+    BRIEF_DOCS "Runtime files required for this target"
+    FULL_DOCS "Runtime files required for this target"
 )
-
-function (append_target_files target)
-    set_property (TARGET ${target} APPEND PROPERTY REQUIRED_RUNTIME_FILES ${ARGN})
-endfunction ()
 
 function (copy_target_files dest_target target)
     get_target_property (tgts ${target} REQUIRED_RUNTIME_FILES)
-    foreach (tgt ${tgts})
-        add_custom_command (TARGET ${dest_target} POST_BUILD
-            COMMENT "Copying $<TARGET_FILE:${tgt}>" VERBATIM
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_FILE:${tgt}>
-                $<TARGET_FILE_DIR:${dest_target}>
-        )
-    endforeach ()
+    if (NOT ${tgts} MATCHES "NOTFOUND")
+        foreach (tgt ${tgts})
+            add_custom_command (TARGET ${dest_target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E echo "Copying $<TARGET_SONAME_FILE_NAME:${tgt}>"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:${tgt}>
+                    $<TARGET_FILE_DIR:${dest_target}>
+            )
+        endforeach ()
+    endif ()
 endfunction ()
 
 macro (blas_init target pkg vendor)
@@ -33,14 +31,6 @@ macro (blas_init target pkg vendor)
     include ("${bootstrap}")
     OpenBLAS_find_archive (BUILD_URL url)
     OpenBLAS_init (BUILD_URL "${url}" PROJ OpenBLAS)
-
-    # OpenBLAS library needs to be copied to binary directory
-    append_target_files (${target} OpenBLAS)
-    
-    target_link_libraries (${target} PUBLIC OpenBLAS)
-    target_include_directories (${target} PUBLIC
-        $<TARGET_PROPERTY:OpenBLAS,INTERFACE_INCLUDE_DIRECTORIES>
-    )
 
     set (BLAS_OpenBLAS 1)
     set (${pkg} "OpenBLAS")
