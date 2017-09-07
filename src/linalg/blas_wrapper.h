@@ -13,10 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.  */
 
 #pragma once
-#include "common.h"
-#include "blas_prelude.h"
+#include "linalg/common.h"
+#include "linalg/blas_prelude.h"
 
-#include <assert.h>
 #include <algorithm>
 
 namespace ss {
@@ -56,6 +55,7 @@ namespace blas
                 return std::max(dim<0>(view), stride<1>(view));
         }
     }
+
 
     /* xnrm2 --------------------------------------------------------------- */
 
