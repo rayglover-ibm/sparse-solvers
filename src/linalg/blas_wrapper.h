@@ -16,7 +16,10 @@ limitations under the License.  */
 #include "linalg/common.h"
 #include "linalg/blas_prelude.h"
 
+#include <dlibxx.hxx>
 #include <algorithm>
+#include <memory>
+#include <string>
 
 namespace ss {
 namespace blas
@@ -54,19 +57,59 @@ namespace blas
             else
                 return std::max(dim<0>(view), stride<1>(view));
         }
-    }
+        
+        /* manages a handle to a shared library and loads symbols */
+        class handle_base
+        {
+          public:
+            template <typename P>
+            class op final : public std::function<P> {
+              public:
+                op(dlibxx::handle& h, const char* sym)
+                    : std::function<P>{ std::move(h.lookup<P>(sym).get()) }
+                {}
+            };
 
+          protected:
+            handle_base(std::string path);
+            dlibxx::handle h;
+        };
+    }
+    
+    class cblas final : detail::handle_base
+    {
+        static std::unique_ptr<cblas> m;
+        static void configure();
+        
+        inline cblas(std::string path) : handle_base{ path } {}
+
+      public:
+        op<decltype(::cblas_dnrm2)>  dnrm2 { h, "cblas_dnrm2" };
+        op<decltype(::cblas_snrm2)>  snrm2 { h, "cblas_snrm2" };
+        op<decltype(::cblas_dgemv)>  dgemv { h, "cblas_dgemv" };
+        op<decltype(::cblas_sgemv)>  sgemv { h, "cblas_sgemv" };
+        op<decltype(::cblas_dger)>   dger  { h, "cblas_dger" };
+        op<decltype(::cblas_sger)>   sger  { h, "cblas_sger" };
+        op<decltype(::cblas_ddot)>   ddot  { h, "cblas_ddot" };
+        op<decltype(::cblas_sdot)>   sdot  { h, "cblas_sdot" };
+        op<decltype(::cblas_dscal)>  dscal { h, "cblas_dscal" };
+        op<decltype(::cblas_sscal)>  sscal { h, "cblas_sscal" };
+        op<decltype(::cblas_idamax)> idamax{ h, "cblas_idamax" };
+        op<decltype(::cblas_isamax)> isamax{ h, "cblas_isamax" };
+
+        static cblas* get();
+    };
 
     /* xnrm2 --------------------------------------------------------------- */
 
     inline double xnrm2(
         const blasint N, const double *X, const blasint incX) {
-        return cblas_dnrm2(N, X, incX);
+        return cblas::get()->dnrm2(N, X, incX);
     }
 
     inline float xnrm2(
         const blasint N, const float *X, const blasint incX) {
-        return cblas_snrm2(N, X, incX);
+        return cblas::get()->snrm2(N, X, incX);
     }
 
 
@@ -78,7 +121,7 @@ namespace blas
         const double alpha, const double *a, const blasint lda, const double *x,
         const blasint incx, const double beta, double *y, const blasint incy)
     {
-        cblas_dgemv(order, trans, m, n, alpha, a, lda, x, incx, beta, y, incy);
+        cblas::get()->dgemv(order, trans, m, n, alpha, a, lda, x, incx, beta, y, incy);
     }
 
     inline void xgemv(
@@ -87,7 +130,7 @@ namespace blas
         const float alpha, const float *a, const blasint lda, const float *x,
         const blasint incx, const float beta, float *y, const blasint incy)
     {
-        cblas_sgemv(order, trans, m, n, alpha, a, lda, x, incx, beta, y, incy);
+        cblas::get()->sgemv(order, trans, m, n, alpha, a, lda, x, incx, beta, y, incy);
     }
 
     template <typename T> void xgemv(
@@ -112,7 +155,7 @@ namespace blas
         const double alpha, const double *X, const blasint incX,
         const double *Y, const blasint incY, double *A, const blasint lda)
     {
-        cblas_dger(order, M, N, alpha, X, incX, Y, incY, A, lda);
+        cblas::get()->dger(order, M, N, alpha, X, incX, Y, incY, A, lda);
     }
 
     inline void xger(
@@ -120,7 +163,7 @@ namespace blas
         const float alpha, const float *X, const blasint incX,
         const float *Y, const blasint incY, float *A, const blasint lda)
     {
-        cblas_sger(order, M, N, alpha, X, incX, Y, incY, A, lda);
+        cblas::get()->sger(order, M, N, alpha, X, incX, Y, incY, A, lda);
     }
 
     template <typename T> void xger(
@@ -141,15 +184,17 @@ namespace blas
     /* xdot ---------------------------------------------------------------- */
 
     inline double xdot(
-        const blasint n, const double *x, const blasint incx, const double *y, const blasint incy)
+        const blasint n, const double *x, const blasint incx,
+        const double *y, const blasint incy)
     {
-        return cblas_ddot(n, x, incx, y, incy);
+        return cblas::get()->ddot(n, x, incx, y, incy);
     }
 
     inline float xdot(
-        const blasint n, const float *x, const blasint incx, const float *y, const blasint incy)
+        const blasint n, const float *x, const blasint incx,
+        const float *y, const blasint incy)
     {
-        return cblas_sdot(n, x, incx, y, incy);
+        return cblas::get()->sdot(n, x, incx, y, incy);
     }
 
     template <typename T> T xdot(
@@ -167,12 +212,12 @@ namespace blas
 
     inline void xscal(
         const blasint N, const double alpha, double *X, const blasint incX) {
-        cblas_dscal(N, alpha, X, incX);
+        cblas::get()->dscal(N, alpha, X, incX);
     }
 
     inline void xscal(
         const blasint N, const float alpha, float *X, const blasint incX) {
-        cblas_sscal(N, alpha, X, incX);
+        cblas::get()->sscal(N, alpha, X, incX);
     }
 
     template <typename T> T xscal(
@@ -187,12 +232,12 @@ namespace blas
 
     inline size_t ixamax(
         const blasint n, const double *x, const blasint incx) {
-        return cblas_idamax(n, x, incx);
+        return cblas::get()->idamax(n, x, incx);
     }
 
     inline size_t ixamax(
         const blasint n, const float *x, const blasint incx) {
-        return cblas_isamax(n, x, incx);
+        return cblas::get()->isamax(n, x, incx);
     }
 }
 }

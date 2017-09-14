@@ -10,3 +10,6 @@
 [submodule "third_party/xtensor"]
 	path = third_party/xtensor
 	url = https://github.com/QuantStack/xtensor.git
+[submodule "third_party/dlibxx"]
+	path = third_party/dlibxx
+	url = https://github.com/m-renaud/libdlibxx

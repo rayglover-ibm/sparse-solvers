@@ -28,6 +28,8 @@ include (BlasUtils)
 list (APPEND src
     "src/lib.cpp"
     "src/solvers/homotopy-cpu.cpp"
+    "src/linalg/blas_wrapper.cpp"
+    "third_party/dlibxx/src/dlibxx.cxx"
 )
 
 add_library (${ss} STATIC ${src})
@@ -44,9 +46,10 @@ target_include_directories (${ss}
             "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xsimd/include"
             "$<TARGET_PROPERTY:kernelpp,INTERFACE_INCLUDE_DIRECTORIES>"
             "$<TARGET_PROPERTY:${blas_target},INTERFACE_INCLUDE_DIRECTORIES>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/third_party/dlibxx/include"
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
-target_link_libraries (${ss} PUBLIC kernelpp ${blas_target})
+target_link_libraries (${ss} PUBLIC kernelpp dl)
 set_target_properties (${ss} PROPERTIES
     REQUIRED_RUNTIME_FILES ${blas_target}
 )
