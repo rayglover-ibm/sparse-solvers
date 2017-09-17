@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.  */
 #include "linalg/blas_wrapper.h"
+#include "linalg/blas_prelude.h"
 
 namespace ss {
 namespace blas
@@ -23,7 +24,7 @@ namespace blas
     }
 
     void cblas::configure() {
-        m.reset(new cblas("./libopenblas.so"));
+        m.reset(new cblas(BLAS_runtime_location));
     }
 
     std::unique_ptr<cblas> cblas::m;

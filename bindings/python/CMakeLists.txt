@@ -8,13 +8,12 @@ set (src "${ss}/binding.cpp")
 
 pybind11_add_module (${binding} ${src})
 copy_target_files (${binding} ${ss})
+set_rpath ("${binding}" "$ORIGIN/")
 
 # -- override the output name and output location
 set_target_properties (${binding} PROPERTIES 
     OUTPUT_NAME "binding"
     LIBRARY_OUTPUT_DIRECTORY "${ss}"
-    BUILD_WITH_INSTALL_RPATH TRUE
-    INSTALL_RPATH "$ORIGIN/"
 )
 foreach (config ${CMAKE_CONFIGURATION_TYPES})
     string (TOUPPER ${config} config)

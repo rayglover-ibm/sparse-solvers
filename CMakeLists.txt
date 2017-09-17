@@ -84,6 +84,7 @@ if (${ss}_WITH_TESTS)
     target_include_directories ("${ss}_test"
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
+    set_rpath ("${ss}_test" "$ORIGIN/")
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
 
     enable_testing ()
@@ -116,6 +117,7 @@ if (${ss}_WITH_BENCHES)
     set (BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Enable Googlebench test suite" FORCE)
     add_subdirectory ("${googlebench_SOURCE_DIR}" "${googlebench_BINARY_DIR}")
     add_executable ("${ss}_benches" "src/solvers/homotopy_bench.cpp")
+    set_rpath ("${ss}_benches" "$ORIGIN/")
     target_link_libraries ("${ss}_benches" "${ss}" benchmark)
 
     enable_testing ()

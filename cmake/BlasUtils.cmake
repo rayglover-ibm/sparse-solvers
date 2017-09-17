@@ -36,3 +36,10 @@ macro (blas_init target pkg vendor)
     set (${pkg} "OpenBLAS")
     set (${vendor} "OpenBLAS")
 endmacro ()
+
+macro (set_rpath target rpath)
+    set_target_properties (${target} PROPERTIES 
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH ${rpath}
+    )
+endmacro ()
