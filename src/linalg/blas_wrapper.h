@@ -69,18 +69,18 @@ namespace blas
         {}
 
       public:
-        op<decltype(::cblas_dnrm2)>  dnrm2 { h, "cblas_dnrm2" };
-        op<decltype(::cblas_snrm2)>  snrm2 { h, "cblas_snrm2" };
-        op<decltype(::cblas_dgemv)>  dgemv { h, "cblas_dgemv" };
-        op<decltype(::cblas_sgemv)>  sgemv { h, "cblas_sgemv" };
-        op<decltype(::cblas_dger)>   dger  { h, "cblas_dger" };
-        op<decltype(::cblas_sger)>   sger  { h, "cblas_sger" };
-        op<decltype(::cblas_ddot)>   ddot  { h, "cblas_ddot" };
-        op<decltype(::cblas_sdot)>   sdot  { h, "cblas_sdot" };
-        op<decltype(::cblas_dscal)>  dscal { h, "cblas_dscal" };
-        op<decltype(::cblas_sscal)>  sscal { h, "cblas_sscal" };
-        op<decltype(::cblas_idamax)> idamax{ h, "cblas_idamax" };
-        op<decltype(::cblas_isamax)> isamax{ h, "cblas_isamax" };
+        op<decltype(::cblas_dnrm2)>  dnrm2 { this, "cblas_dnrm2" };
+        op<decltype(::cblas_snrm2)>  snrm2 { this, "cblas_snrm2" };
+        op<decltype(::cblas_dgemv)>  dgemv { this, "cblas_dgemv" };
+        op<decltype(::cblas_sgemv)>  sgemv { this, "cblas_sgemv" };
+        op<decltype(::cblas_dger)>   dger  { this, "cblas_dger" };
+        op<decltype(::cblas_sger)>   sger  { this, "cblas_sger" };
+        op<decltype(::cblas_ddot)>   ddot  { this, "cblas_ddot" };
+        op<decltype(::cblas_sdot)>   sdot  { this, "cblas_sdot" };
+        op<decltype(::cblas_dscal)>  dscal { this, "cblas_dscal" };
+        op<decltype(::cblas_sscal)>  sscal { this, "cblas_sscal" };
+        op<decltype(::cblas_idamax)> idamax{ this, "cblas_idamax" };
+        op<decltype(::cblas_isamax)> isamax{ this, "cblas_isamax" };
 
         static cblas* get();
     };

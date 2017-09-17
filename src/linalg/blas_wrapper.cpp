@@ -25,6 +25,11 @@ namespace blas
 
     void cblas::configure() {
         m.reset(new cblas(BLAS_runtime_location));
+        /* if an error occured, abort */
+        if (m->error()) {
+            fprintf(stderr, "%s\n", m->error().value().c_str());
+            abort();
+        }
     }
 
     std::unique_ptr<cblas> cblas::m;
