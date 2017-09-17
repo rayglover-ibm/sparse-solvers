@@ -29,7 +29,7 @@ list (APPEND src
     "src/lib.cpp"
     "src/solvers/homotopy-cpu.cpp"
     "src/linalg/blas_wrapper.cpp"
-    "third_party/dlibxx/src/dlibxx.cxx"
+    "third_party/dlibxx/src/dlibxx.unix.cxx"
 )
 
 add_library (${ss} STATIC ${src})

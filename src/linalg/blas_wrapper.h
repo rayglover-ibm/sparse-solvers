@@ -57,31 +57,16 @@ namespace blas
             else
                 return std::max(dim<0>(view), stride<1>(view));
         }
-        
-        /* manages a handle to a shared library and loads symbols */
-        class handle_base
-        {
-          public:
-            template <typename P>
-            class op final : public std::function<P> {
-              public:
-                op(dlibxx::handle& h, const char* sym)
-                    : std::function<P>{ std::move(h.lookup<P>(sym).get()) }
-                {}
-            };
-
-          protected:
-            handle_base(std::string path);
-            dlibxx::handle h;
-        };
     }
     
-    class cblas final : detail::handle_base
+    class cblas final : dlibxx::handle_fascade
     {
         static std::unique_ptr<cblas> m;
         static void configure();
         
-        inline cblas(std::string path) : handle_base{ path } {}
+        inline cblas(const std::string& path)
+            : dlibxx::handle_fascade{ path.c_str() }
+        {}
 
       public:
         op<decltype(::cblas_dnrm2)>  dnrm2 { h, "cblas_dnrm2" };
@@ -99,6 +84,7 @@ namespace blas
 
         static cblas* get();
     };
+
 
     /* xnrm2 --------------------------------------------------------------- */
 

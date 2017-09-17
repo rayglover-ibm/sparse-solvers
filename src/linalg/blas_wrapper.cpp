@@ -16,20 +16,6 @@ limitations under the License.  */
 namespace ss {
 namespace blas
 {
-    namespace detail {
-        handle_base::handle_base(std::string path)
-        {
-            h.resolve_policy(dlibxx::resolve::lazy);
-            h.set_options(dlibxx::options::local);
-            h.load(path);
-
-            if (!h.loaded()) {
-                fprintf(stderr, "Failed to load OpenBLAS: %s\n", h.error().c_str());
-                abort();
-            }
-        }
-    }
-
     cblas* cblas::get()
     {
         if (!m) { configure(); }
