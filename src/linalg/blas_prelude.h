@@ -18,7 +18,6 @@ limitations under the License.  */
 #if defined(BLAS_OpenBLAS)
 # include <openblas_config.h>
 # include <cblas.h>
-# define BLAS_runtime_location "libopenblas.so"
 #else
 static_assert(false, "Couldn't determine which BLAS to use!");
 #endif

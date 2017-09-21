@@ -24,7 +24,7 @@ namespace blas
     }
 
     void cblas::configure() {
-        m.reset(new cblas(BLAS_runtime_location));
+        m.reset(new cblas(BLAS_RUNTIME_FILE));
         /* if an error occured, abort */
         if (m->error()) {
             fprintf(stderr, "%s\n", m->error().value().c_str());

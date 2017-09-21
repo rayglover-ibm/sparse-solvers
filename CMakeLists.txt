@@ -33,12 +33,17 @@ list (APPEND src
 )
 
 add_library (${ss} STATIC ${src})
-blas_init (${ss} blas_target blas_vendor)
+blas_init (blas_target blas_vendor)
 
 configure_file (
     "include/ss/ss_config.h.in"
-    "include/ss/ss_config.h"
+    "include/ss/ss_config.h.processed"
 )
+file (GENERATE
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/include/ss/ss_config.h"
+    INPUT  "${CMAKE_CURRENT_BINARY_DIR}/include/ss/ss_config.h.processed"
+)
+
 target_include_directories (${ss}
     PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include"
             "${CMAKE_CURRENT_BINARY_DIR}/include"
@@ -85,6 +90,7 @@ if (${ss}_WITH_TESTS)
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     set_rpath ("${ss}_test" "$ORIGIN/")
+    copy_target_files ("${ss}_test" "${ss}")
     target_link_libraries ("${ss}_test" "${ss}" gtest gmock_main)
 
     enable_testing ()

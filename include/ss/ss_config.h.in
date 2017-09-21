@@ -12,5 +12,6 @@
 #define ss_VERSION_PATCH ${core_VERSION_PATCH}
 
 #define BLAS_VENDOR "${blas_vendor}"
+#define BLAS_RUNTIME_FILE "$<TARGET_FILE_NAME:${blas_target}>"
 
 #cmakedefine BLAS_OpenBLAS
