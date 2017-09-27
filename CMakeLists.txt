@@ -33,7 +33,7 @@ list (APPEND src
 )
 
 add_library (${ss} STATIC ${src})
-blas_init (blas_target blas_vendor)
+blas_init (${ss} blas_target)
 
 configure_file (
     "include/ss/ss_config.h.in"
@@ -54,9 +54,6 @@ target_include_directories (${ss}
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 target_link_libraries (${ss} PUBLIC kernelpp dl)
-set_target_properties (${ss} PROPERTIES
-    REQUIRED_RUNTIME_FILES ${blas_target}
-)
 
 # -- general compiler/linker settings
 target_compile_options (${ss} PUBLIC

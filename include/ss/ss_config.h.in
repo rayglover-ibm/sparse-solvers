@@ -11,7 +11,9 @@
 #define ss_VERSION_MINOR ${core_VERSION_MINOR}
 #define ss_VERSION_PATCH ${core_VERSION_PATCH}
 
-#define BLAS_VENDOR "${blas_vendor}"
-#define BLAS_RUNTIME_FILE "$<TARGET_FILE_NAME:${blas_target}>"
-
 #cmakedefine BLAS_OpenBLAS
+
+#ifdef BLAS_OpenBLAS
+# define BLAS_RUNTIME_FILE "$<TARGET_FILE_NAME:OpenBLAS::NEHALEM>"
+# define BLAS_AVX_RUNTIME_FILE "$<TARGET_FILE_NAME:OpenBLAS::HASWELL>"
+#endif
