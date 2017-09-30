@@ -24,6 +24,34 @@ limitations under the License.  */
 namespace ss {
 namespace blas
 {
+    class cblas final : dlibxx::handle_fascade
+    {
+        struct loader;
+
+        static std::unique_ptr<cblas> m;
+        static void configure();
+
+        inline cblas(const std::string& path)
+            : dlibxx::handle_fascade{ path.c_str() }
+        {}
+
+      public:
+        op<decltype(::cblas_dnrm2)>  dnrm2 { this, "cblas_dnrm2" };
+        op<decltype(::cblas_snrm2)>  snrm2 { this, "cblas_snrm2" };
+        op<decltype(::cblas_dgemv)>  dgemv { this, "cblas_dgemv" };
+        op<decltype(::cblas_sgemv)>  sgemv { this, "cblas_sgemv" };
+        op<decltype(::cblas_dger)>   dger  { this, "cblas_dger" };
+        op<decltype(::cblas_sger)>   sger  { this, "cblas_sger" };
+        op<decltype(::cblas_ddot)>   ddot  { this, "cblas_ddot" };
+        op<decltype(::cblas_sdot)>   sdot  { this, "cblas_sdot" };
+        op<decltype(::cblas_dscal)>  dscal { this, "cblas_dscal" };
+        op<decltype(::cblas_sscal)>  sscal { this, "cblas_sscal" };
+        op<decltype(::cblas_idamax)> idamax{ this, "cblas_idamax" };
+        op<decltype(::cblas_isamax)> isamax{ this, "cblas_isamax" };
+
+        static cblas* get();
+    };
+
     namespace detail
     {
         template <typename T, size_t N>
@@ -58,33 +86,6 @@ namespace blas
                 return std::max(dim<0>(view), stride<1>(view));
         }
     }
-    
-    class cblas final : dlibxx::handle_fascade
-    {
-        static std::unique_ptr<cblas> m;
-        static void configure();
-        
-        inline cblas(const std::string& path)
-            : dlibxx::handle_fascade{ path.c_str() }
-        {}
-
-      public:
-        op<decltype(::cblas_dnrm2)>  dnrm2 { this, "cblas_dnrm2" };
-        op<decltype(::cblas_snrm2)>  snrm2 { this, "cblas_snrm2" };
-        op<decltype(::cblas_dgemv)>  dgemv { this, "cblas_dgemv" };
-        op<decltype(::cblas_sgemv)>  sgemv { this, "cblas_sgemv" };
-        op<decltype(::cblas_dger)>   dger  { this, "cblas_dger" };
-        op<decltype(::cblas_sger)>   sger  { this, "cblas_sger" };
-        op<decltype(::cblas_ddot)>   ddot  { this, "cblas_ddot" };
-        op<decltype(::cblas_sdot)>   sdot  { this, "cblas_sdot" };
-        op<decltype(::cblas_dscal)>  dscal { this, "cblas_dscal" };
-        op<decltype(::cblas_sscal)>  sscal { this, "cblas_sscal" };
-        op<decltype(::cblas_idamax)> idamax{ this, "cblas_idamax" };
-        op<decltype(::cblas_isamax)> isamax{ this, "cblas_isamax" };
-
-        static cblas* get();
-    };
-
 
     /* xnrm2 --------------------------------------------------------------- */
 
