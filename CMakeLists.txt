@@ -121,6 +121,7 @@ if (${ss}_WITH_BENCHES)
     add_subdirectory ("${googlebench_SOURCE_DIR}" "${googlebench_BINARY_DIR}")
     add_executable ("${ss}_benches" "src/solvers/homotopy_bench.cpp")
     set_rpath ("${ss}_benches" "$ORIGIN/")
+    copy_target_files ("${ss}_benches" "${ss}")
     target_link_libraries ("${ss}_benches" "${ss}" benchmark)
 
     enable_testing ()
