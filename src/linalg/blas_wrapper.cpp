@@ -14,8 +14,7 @@ limitations under the License.  */
 #include "linalg/blas_wrapper.h"
 #include "linalg/blas_prelude.h"
 
-#include "kernelpp/kernel.h"
-#include "kernelpp/kernel_invoke.h"
+#include <kernelpp/kernel_invoke.h>
 
 namespace ss {
 namespace blas
