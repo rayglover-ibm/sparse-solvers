@@ -23,8 +23,10 @@ target_link_libraries (${binding}
     PRIVATE ${ss}
 )
 
-# -- setup.py
-configure_file (setup.py.in setup.py)
+# -- setup.py, readme, manifest
+configure_file (setup.py.in  setup.py)
+configure_file (README.in    README)
+configure_file (MANIFEST.in  MANIFEST.in)
 
 # -- copy other files
 configure_file ("${ss}/__init__.py"     "${ss}/__init__.py" COPYONLY)
@@ -36,6 +38,12 @@ add_custom_target (bdist_wheel
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${binding}
 )
+if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+    # warn about non-portable wheels on linux
+    add_custom_command (TARGET bdist_wheel POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "-- [warning] PEP 513: use 'auditwheel' for Portable Linux Built Distributions"
+    )
+endif ()
 
 # -- binding tests
 if (${ss}_WITH_TESTS)

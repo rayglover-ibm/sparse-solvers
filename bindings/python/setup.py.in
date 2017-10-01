@@ -9,22 +9,42 @@ class CMakeDistribution(Distribution):
         return True
 
 setup(
-    name = '${ss}',
+    name         = '${ss}',
+    version      = '${PROJECT_VERSION}',
+    url          = 'https://github.com/rayglover-ibm/sparse-solvers',
+    author       = 'IBM',
+    author_email = 'gh@rayglover.net',
+    description  = 'High performance L1 minimization solvers',
+    license      = 'Apache 2.0',
+    keywords     = ['sparse', 'homotopy', 'blas'],
+    classifiers  = [
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Topic :: Scientific/Engineering',
+        'Topic :: Scientific/Engineering :: Mathematics',
+        'Topic :: Software Development',
+        'Topic :: Software Development :: Libraries',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+    ],
+
     packages = ['${ss}'],
-    install_requires = ['numpy>=0.10'],
+    package_dir={'${ss}':'${ss}'},
+
+    install_requires = [
+        'numpy>=0.11',
+        'wheel>=0.27'
+    ],
 
     include_package_data = True,
     package_data = {
-        # If any package contains *.<ext> , include them:
-        '${ss}': ['*.pyd', '*.dll'] if 'win' in sys.platform else ['*.so', '*.dynlib']
+        '${ss}': ['binding.pyd'] if 'win' in sys.platform else ['binding.so']
     },
-
-    version     = '${PROJECT_VERSION}',
-    author      = 'IBM',
-    description = 'desc',
-    license     = 'Apache 2.0',
-    keywords    = '',
-    url         = '',
 
     options = {
         'bdist_wheel': {
