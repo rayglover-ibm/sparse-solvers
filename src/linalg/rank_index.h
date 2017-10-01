@@ -22,7 +22,9 @@ limitations under the License.  */
 
 namespace ss
 {
-    /* Poor-mans order-statistic tree */
+    /*  Poor-mans order-statistic tree with rank_of
+     *  and rank_at operations.
+     */
     template <typename T>
     class rank_index
     {
@@ -47,7 +49,8 @@ namespace ss
         std::vector<T> _index;
     };
 
-    /* --------------------------------------------------------------------- */
+
+    /* Implementation ------------------------------------------------------ */
 
     template <typename T>
     rank_index<T>::rank_index()

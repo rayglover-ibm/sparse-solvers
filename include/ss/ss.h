@@ -69,6 +69,7 @@ namespace ss
         std::unique_ptr<state> m;
     };
 
+
     /* Utilities ----------------------------------------------------------- */
 
     /*  computes A x

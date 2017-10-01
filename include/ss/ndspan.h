@@ -30,6 +30,7 @@ namespace ss
         xt::xbuffer_adaptor<T>, NDim, xt::layout_type::dynamic
         >;
 
+
     /* as_span ------------------------------------------------------------- */
 
     namespace detail
@@ -145,6 +146,7 @@ namespace ss
 
         return detail::adapt(buf, len, t.shape(), t.strides());
     }
+
 
     /* view ---------------------------------------------------------------- */
 
