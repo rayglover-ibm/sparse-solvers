@@ -66,7 +66,7 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         -fdiagnostics-color -fno-omit-frame-pointer
     )
     target_compile_options (${ss} PUBLIC
-        $<$<CONFIG:Release>:-O3 -g -mavx2>
+        $<$<CONFIG:Release>:-O3>
     )
 endif ()
 
