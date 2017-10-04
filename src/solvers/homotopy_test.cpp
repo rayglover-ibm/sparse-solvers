@@ -62,6 +62,22 @@ TEST(homotopy, smoke_test)
     }
 }
 
+TEST(homotopy, sparse_signal_test)
+{
+    const uint32_t N = 10;
+
+    xtensor<float, 2> identity = xt::eye(N);
+    xtensor<float, 1> signal   = xt::zeros<float>({N});
+    xtensor<float, 1> x        = xt::zeros<float>({N});
+
+    ss::homotopy solver;
+
+    auto result = solver.solve(
+        as_span(identity), as_span(signal), .001f, N, as_span(x));
+    
+    ::check_report(result, .001f, N);
+}
+
 TEST(homotopy, smoke_test_column_subset)
 {
     const int N = 10;

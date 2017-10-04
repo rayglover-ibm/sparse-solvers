@@ -217,8 +217,7 @@ namespace ss
         /* initialise residual vector */
         residual_vector(A, y, x, as_span(c));
 
-        /* initialise lambda = || c_vec || _inf */
-        {
+        {   /* initialise lambda = || c_vec || _inf */
             size_t idx;
             c_inf = inf_norm(as_span(c), &idx);
 
@@ -232,32 +231,34 @@ namespace ss
             expand(direction, lambda_indices);
         }
 
-        /* evaluate homotopy path segments in iterations */
+        /* evaluate homotopy path segments in iterations, stopping if
+             - the infinity norm of residual vector is within tolerance
+             - the residual vector length reaches zero 
+         */
         std::uint32_t iter{ 0u };
-        while (iter < max_iter)
-        {
+        do {
             iter++;
-            {
-                T min; size_t idx;
 
-                std::tie(min, idx) = find_max_gamma(A, as_span(c), x,
-                    as_span(direction), c_inf, lambda_indices);
+            T min; size_t idx;
 
-                /* update inverse by inserting/removing the
-                   respective index from the inverse */
-                inverse_add_or_remove(A, idx, lambda_indices, inv);
+            std::tie(min, idx) = find_max_gamma(A, as_span(c), x,
+                as_span(direction), c_inf, lambda_indices);
 
-                /* update x */
-                ss::view(x) += min * direction;
-            }
+            /* update inverse by inserting/removing the
+               respective index from the inverse */
+            inverse_add_or_remove(A, idx, lambda_indices, inv);
+
+            auto K = lambda_indices.size();
+            if (K == 0) { break; }
+
+            /* update x */
+            ss::view(x) += min * direction;
 
             /* update residual vector */
             residual_vector(A, y, x, as_span(c));
-
-            /* update direction vector */
-            {
-                size_t K = lambda_indices.size();
-
+            
+            {   /* update direction vector */
+                /* produce a subset of c and convert to -1,0,+1 */
                 vec_subset(c, lambda_indices, c_gamma);
                 sign(as_span(c_gamma.storage_begin(), K), tolerance);
 
@@ -268,13 +269,11 @@ namespace ss
                 expand(direction, lambda_indices);
             }
 
-            /* find lambda(i.e., infinite norm of residual vector) */
+            /* find lambda (i.e., infinity norm of residual vector) */
             c_inf = inf_norm(as_span(c));
-
-            /* check if infinity norm of residual vector is within tolerance */
-            if (c_inf < tolerance)
-                break;
         }
+        while (iter < max_iter && c_inf > tolerance);
+        
         return{ iter, c_inf };
     }
 
