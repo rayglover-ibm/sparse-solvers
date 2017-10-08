@@ -1,6 +1,8 @@
 # Sparse Solvers
 _High performance L1 minimization solvers for Python and Tensorflow. (Work in progress.)_
 
+[![Build Status](https://travis-ci.org/rayglover-ibm/sparse-solvers.svg?branch=master)](https://travis-ci.org/rayglover-ibm/sparse-solvers)
+
 ## Releases
 
 _(TODO)_
