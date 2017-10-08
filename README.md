@@ -18,7 +18,7 @@ First, clone the repository and its submodules:
 
 At a minimum, you will need:
 
-- CMake 3.3
+- CMake 3.2
 - A reasonably compliant C++14 compiler, e.g.:
 
     | Windows    | Linux                 | Mac       |
