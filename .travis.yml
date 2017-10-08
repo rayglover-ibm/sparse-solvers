@@ -34,6 +34,7 @@ install:
     fi
 
 before_script:
+  - curl -v https://api.github.com/repos/rayglover-ibm/openblas-ci/releases/latest
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
   - mkdir build && cd build
   - cmake -GNinja ${CMAKE_EXTRA_ARGS} .. -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=$BUILD_TYPE
