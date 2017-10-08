@@ -11,8 +11,9 @@ copy_target_files (${binding} ${ss})
 set_rpath ("${binding}" "$ORIGIN/")
 
 # -- override the output name and output location
-set_target_properties (${binding} PROPERTIES 
+set_target_properties (${binding} PROPERTIES
     OUTPUT_NAME "binding"
+    DEBUG_POSTFIX ""
     LIBRARY_OUTPUT_DIRECTORY "${ss}"
 )
 foreach (config ${CMAKE_CONFIGURATION_TYPES})
