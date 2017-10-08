@@ -34,8 +34,11 @@ install:
     fi
 
 before_script:
-  - curl -v https://api.github.com/repos/rayglover-ibm/openblas-ci/releases/latest
+  # check github rate limit, which can be problematic
+  - curl -u $GITHUB_AUTH --keepalive-time 20 https://api.github.com/rate_limit
+  # set compiler
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
+  # build
   - mkdir build && cd build
   - cmake -GNinja ${CMAKE_EXTRA_ARGS} .. -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=$BUILD_TYPE
   - cmake --build .
