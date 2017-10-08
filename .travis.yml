@@ -23,16 +23,15 @@ matrix:
         apt:
           sources: *ubuntu-sources
           packages: [*ubuntu-packages, python3.5-dev]
-      install:
-        - pyenv versions
-        - pyenv global $PYTHON
-        - pip install --user --upgrade pip
-        - pip install --user numpy wheel
-        
-cache:
-  directories:
-  - $HOME/.ccache
-  - $HOME/download
+
+install:
+  - | 
+    if [ -n "$PYTHON" ]; then
+      pyenv versions
+      pyenv global $PYTHON
+      pip install --user --upgrade pip
+      pip install --user numpy wheel
+    fi
 
 before_script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
