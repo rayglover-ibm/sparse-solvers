@@ -13,16 +13,16 @@ matrix:
     - os: linux
       addons:
         apt:
-          sources: [kubuntu-backports, ubuntu-toolchain-r-test, george-edison55-precise-backports, deadsnakes]
-          packages: [cmake, g++-5, ninja-build]
+          sources: &ubuntu-sources [kubuntu-backports, ubuntu-toolchain-r-test, george-edison55-precise-backports, deadsnakes]
+          packages:  &ubuntu-packages [cmake, g++-5, ninja-build]
 
     # -- python 3.5
     - os: linux
       env: PYTHON=3.5 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
       addons:
         apt:
-          sources: [kubuntu-backports, ubuntu-toolchain-r-test, george-edison55-precise-backports, deadsnakes]
-          packages: [cmake, g++-5, ninja-build, python3.5-dev]
+          sources: *ubuntu-sources
+          packages: [*ubuntu-packages, python3.5-dev]
       install:
         - pyenv versions
         - pyenv global $PYTHON
