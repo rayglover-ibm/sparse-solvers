@@ -30,7 +30,7 @@ install:
       pyenv versions
       pyenv global $PYTHON
       pip install --user --upgrade pip
-      pip install --user numpy wheel
+      pip install --user numpy wheel auditwheel==1.5.0 twine
     fi
 
 before_script:
@@ -45,6 +45,14 @@ before_script:
 
 script:
   - ctest . -VV -C $BUILD_TYPE
+
+
+after_success:
+  - |
+    # pypi binary deployment on tags
+    if [ -n "$PYTHON" ]; then
+      cmake --build . --target bdist_wheel
+    fi
 
 notifications:
   email: false
