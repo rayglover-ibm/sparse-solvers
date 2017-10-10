@@ -35,7 +35,7 @@ install:
 
 before_script:
   # check github rate limit, which can be problematic
-  - curl --keepalive-time 20 -H "Authorization:token $GITHUB_AUTH" https://api.github.com/rate_limit
+  - echo '-H "Authorization:token $GITHUB_AUTH"' > ~/.curlrc
   # set compiler
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
   # build
