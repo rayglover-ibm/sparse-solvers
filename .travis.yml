@@ -45,7 +45,7 @@ before_script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
   # build
   - mkdir build && cd build
-  - cmake -GNinja ${CMAKE_EXTRA_ARGS} .. -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+  - cmake -GNinja ${CMAKE_EXTRA_ARGS} .. -DOpenBLAS_github_authtoken=${GITHUB_AUTH} -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=$BUILD_TYPE
   - cmake --build .
 
 script:
