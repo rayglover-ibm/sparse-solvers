@@ -32,7 +32,7 @@ install:
   - export PATH=/tmp/$CMAKE_DIRNAME/bin:$PATH
   - cmake --version
   # python
-  - | 
+  - |
     if [ -n "$PYTHON" ]; then
       pyenv versions
       pyenv global $PYTHON
@@ -43,20 +43,27 @@ install:
 before_script:
   # set compiler
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
-  # build
-  - mkdir build && cd build
-  - cmake -GNinja ${CMAKE_EXTRA_ARGS} .. -DOpenBLAS_github_authtoken=${GITHUB_AUTH} -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-  - cmake --build .
+  # build (use gh token for openblas-ci, to avoid rate limiting)
+  - |
+    mkdir build && cd build
+    cmake -GNinja ${CMAKE_EXTRA_ARGS} ..         \
+      -DOpenBLAS_github_authtoken=${GITHUB_AUTH} \
+      -DCMAKE_CXX_COMPILER=$COMPILER             \
+      -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    cmake --build .
 
 script:
   - ctest . -VV -C $BUILD_TYPE
-
 
 after_success:
   - |
     # pypi binary deployment on tags
     if [ -n "$PYTHON" ]; then
       cmake --build . --target bdist_wheel
+      pushd bindings/python
+      # PEP 513: use auditwheel for Portable Linux Built Distributions
+      auditwheel repair --wheel-dir ./dist-repair `find . -name "*x86_64.whl" | head -n 1`
+      twine upload -u rayglover -p ${PYPI_AUTH} ./dist-repair/*.whl
     fi
 
 notifications:
