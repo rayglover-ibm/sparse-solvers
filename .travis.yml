@@ -24,7 +24,7 @@ matrix:
       addons:
         apt:
           sources: *ubuntu-sources
-          packages: [*ubuntu-packages, python3.5-dev]
+          packages: [*ubuntu-packages, python3.5-dev, patchelf]
 
 install:
   # cmake
@@ -63,7 +63,10 @@ after_success:
       pushd bindings/python
       # PEP 513: use auditwheel for Portable Linux Built Distributions
       auditwheel repair --wheel-dir ./dist-repair `find . -name "*x86_64.whl" | head -n 1`
-      twine upload -u rayglover -p ${PYPI_AUTH} ./dist-repair/*.whl
+      if [ $? -eq 0 ]; then
+        # deploy
+        twine upload -u rayglover -p ${PYPI_AUTH} ./dist-repair/*.whl
+      fi
     fi
 
 notifications:
