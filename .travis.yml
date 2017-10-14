@@ -38,7 +38,7 @@ matrix:
 
     # -- python 3.6
     - os: linux
-      env: BUILD_TYPE=Release PYTHON=3.6 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      env: BUILD_TYPE=Release PYTHON=3.6.0 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
       addons:
         apt:
           sources: *ubuntu-sources
@@ -59,7 +59,7 @@ install:
         export PATH=/tmp/$PATCHELF_DIRNAME/src:$PATH
         patchelf --version
       fi
-      pyenv versions
+      pyenv install --skip-existing $PYTHON
       pyenv global $PYTHON
       pip install --user --upgrade pip
       pip install --user numpy wheel auditwheel==1.5.0 twine
