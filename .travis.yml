@@ -13,20 +13,37 @@ dist: trusty
 
 matrix:
   include:
-    # -- core library tests
+    # -- core library tests (debug)
     - os: linux
       addons:
         apt:
           sources: &ubuntu-sources [kubuntu-backports, ubuntu-toolchain-r-test, george-edison55-precise-backports, deadsnakes]
           packages:  &ubuntu-packages [g++-5, ninja-build]
 
+    # -- python 2.7
+    - os: linux
+      env: BUILD_TYPE=Release PYTHON=2.7 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      addons:
+        apt:
+          sources: *ubuntu-sources
+          packages: [*ubuntu-packages, python2.7-dev]
+    
     # -- python 3.5
     - os: linux
-      env: PYTHON=3.5 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      env: BUILD_TYPE=Release PYTHON=3.5 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
       addons:
         apt:
           sources: *ubuntu-sources
           packages: [*ubuntu-packages, python3.5-dev]
+
+    # -- python 3.6
+    - os: linux
+      env: BUILD_TYPE=Release PYTHON=3.6 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      addons:
+        apt:
+          sources: *ubuntu-sources
+          packages: [*ubuntu-packages, python3.6-dev]
+
 
 install:
   # -- cmake
@@ -64,9 +81,9 @@ script:
   - ctest . -VV -C $BUILD_TYPE
 
 after_success:
+  # -- pypi binary deployment on tags
   - |
-    # -- pypi binary deployment on tags
-    if [ -n "$PYTHON" ]; then
+    if [ -n "$PYTHON" ] && [[ "$BUILD_TYPE" == "Release" ]] && [ -n "$TRAVIS_TAG" ]; then
       cmake --build . --target bdist_wheel
       pushd bindings/python
       # -- PEP 513: use auditwheel for Portable Linux Built Distributions
