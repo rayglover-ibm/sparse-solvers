@@ -4,44 +4,95 @@ sudo: false
 env:
   global:
     - BUILD_TYPE=Debug
+    - CMAKE_URL=http://cmake.org/files/v3.8/cmake-3.8.2-Linux-x86_64.tar.gz
+    - CMAKE_DIRNAME=cmake-3.8.2-Linux-x86_64
+    - PATCHELF_URL=https://nixos.org/releases/patchelf/patchelf-0.9/patchelf-0.9.tar.gz
+    - PATCHELF_DIRNAME=patchelf-0.9
 
 dist: trusty
 
 matrix:
   include:
-    # -- core library tests
+    # -- core library tests (debug)
     - os: linux
       addons:
         apt:
           sources: &ubuntu-sources [kubuntu-backports, ubuntu-toolchain-r-test, george-edison55-precise-backports, deadsnakes]
-          packages:  &ubuntu-packages [cmake, g++-5, ninja-build]
+          packages:  &ubuntu-packages [g++-5, ninja-build]
 
+    # -- python 2.7
+    - os: linux
+      env: BUILD_TYPE=Release PYTHON=2.7 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      addons:
+        apt:
+          sources: *ubuntu-sources
+          packages: [*ubuntu-packages, python2.7-dev]
+    
     # -- python 3.5
     - os: linux
-      env: PYTHON=3.5 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      env: BUILD_TYPE=Release PYTHON=3.5 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
       addons:
         apt:
           sources: *ubuntu-sources
           packages: [*ubuntu-packages, python3.5-dev]
-      install:
-        - pyenv versions
-        - pyenv global $PYTHON
-        - pip install --user --upgrade pip
-        - pip install --user numpy wheel
-        
-cache:
-  directories:
-  - $HOME/.ccache
-  - $HOME/download
+
+    # -- python 3.6
+    - os: linux
+      env: BUILD_TYPE=Release PYTHON=3.6 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      addons:
+        apt:
+          sources: *ubuntu-sources
+          packages: [*ubuntu-packages, python3.6-dev]
+
+
+install:
+  # -- cmake
+  - curl -L $CMAKE_URL | tar xz -C /tmp
+  - export PATH=/tmp/$CMAKE_DIRNAME/bin:$PATH
+  - cmake --version
+  # -- python (and patchelf on linux)
+  - |
+    if [ -n "$PYTHON" ]; then
+      if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+        curl -L $PATCHELF_URL | tar xz -C /tmp
+        pushd /tmp/$PATCHELF_DIRNAME && ./configure && make && popd
+        export PATH=/tmp/$PATCHELF_DIRNAME/src:$PATH
+        patchelf --version
+      fi
+      pyenv versions
+      pyenv global $PYTHON
+      pip install --user --upgrade pip
+      pip install --user numpy wheel auditwheel==1.5.0 twine
+    fi
 
 before_script:
+  # -- set compiler
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
-  - mkdir build && cd build
-  - cmake -GNinja ${CMAKE_EXTRA_ARGS} .. -DCMAKE_CXX_COMPILER=$COMPILER -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-  - cmake --build .
+  # -- build (use gh token for openblas-ci, to avoid rate limiting)
+  - |
+    mkdir build && cd build
+    cmake -GNinja ${CMAKE_EXTRA_ARGS} ..         \
+      -DOpenBLAS_github_authtoken=${GITHUB_AUTH} \
+      -DCMAKE_CXX_COMPILER=$COMPILER             \
+      -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    cmake --build .
 
 script:
   - ctest . -VV -C $BUILD_TYPE
+
+after_success:
+  # -- pypi binary deployment on tags
+  - |
+    if [ -n "$PYTHON" ] && [[ "$BUILD_TYPE" == "Release" ]] && [ -n "$TRAVIS_TAG" ]; then
+      cmake --build . --target bdist_wheel
+      pushd bindings/python
+      # -- PEP 513: use auditwheel for Portable Linux Built Distributions
+      auditwheel repair --wheel-dir ./dist-repair `find . -name "*x86_64.whl" | head -n 1`
+      if [ $? -eq 0 ]; then
+        # -- deploy
+        twine upload -u rayglover -p ${PYPI_AUTH} ./dist-repair/*.whl
+      fi
+    fi
 
 notifications:
   email: false
