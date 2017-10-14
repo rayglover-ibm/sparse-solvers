@@ -6,6 +6,8 @@ env:
     - BUILD_TYPE=Debug
     - CMAKE_URL=http://cmake.org/files/v3.8/cmake-3.8.2-Linux-x86_64.tar.gz
     - CMAKE_DIRNAME=cmake-3.8.2-Linux-x86_64
+    - PATCHELF_URL=https://nixos.org/releases/patchelf/patchelf-0.9/patchelf-0.9.tar.gz
+    - PATCHELF_DIRNAME=patchelf-0.9
 
 dist: trusty
 
@@ -24,16 +26,22 @@ matrix:
       addons:
         apt:
           sources: *ubuntu-sources
-          packages: [*ubuntu-packages, python3.5-dev, patchelf]
+          packages: [*ubuntu-packages, python3.5-dev]
 
 install:
   # cmake
   - curl -L $CMAKE_URL | tar xz -C /tmp
   - export PATH=/tmp/$CMAKE_DIRNAME/bin:$PATH
   - cmake --version
-  # python
+  # python (and patchelf on linux)
   - |
     if [ -n "$PYTHON" ]; then
+      if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+        curl -L $PATCHELF_URL | tar xz -C /tmp
+        pushd /tmp/$PATCHELF_DIRNAME && ./configure && make && popd
+        export PATH=/tmp/$PATCHELF_DIRNAME/bin:$PATH
+        patchelf --version
+      fi
       pyenv versions
       pyenv global $PYTHON
       pip install --user --upgrade pip
