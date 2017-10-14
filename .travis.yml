@@ -29,17 +29,17 @@ matrix:
           packages: [*ubuntu-packages, python3.5-dev]
 
 install:
-  # cmake
+  # -- cmake
   - curl -L $CMAKE_URL | tar xz -C /tmp
   - export PATH=/tmp/$CMAKE_DIRNAME/bin:$PATH
   - cmake --version
-  # python (and patchelf on linux)
+  # -- python (and patchelf on linux)
   - |
     if [ -n "$PYTHON" ]; then
       if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         curl -L $PATCHELF_URL | tar xz -C /tmp
         pushd /tmp/$PATCHELF_DIRNAME && ./configure && make && popd
-        export PATH=/tmp/$PATCHELF_DIRNAME/bin:$PATH
+        export PATH=/tmp/$PATCHELF_DIRNAME/src:$PATH
         patchelf --version
       fi
       pyenv versions
@@ -49,9 +49,9 @@ install:
     fi
 
 before_script:
-  # set compiler
+  # -- set compiler
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export COMPILER=g++-5   ; fi
-  # build (use gh token for openblas-ci, to avoid rate limiting)
+  # -- build (use gh token for openblas-ci, to avoid rate limiting)
   - |
     mkdir build && cd build
     cmake -GNinja ${CMAKE_EXTRA_ARGS} ..         \
@@ -65,14 +65,14 @@ script:
 
 after_success:
   - |
-    # pypi binary deployment on tags
+    # -- pypi binary deployment on tags
     if [ -n "$PYTHON" ]; then
       cmake --build . --target bdist_wheel
       pushd bindings/python
-      # PEP 513: use auditwheel for Portable Linux Built Distributions
+      # -- PEP 513: use auditwheel for Portable Linux Built Distributions
       auditwheel repair --wheel-dir ./dist-repair `find . -name "*x86_64.whl" | head -n 1`
       if [ $? -eq 0 ]; then
-        # deploy
+        # -- deploy
         twine upload -u rayglover -p ${PYPI_AUTH} ./dist-repair/*.whl
       fi
     fi
