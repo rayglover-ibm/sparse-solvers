@@ -16,8 +16,7 @@ class HomotopySolverTest(unittest.TestCase):
             signal[n] = 1
 
             x, info = solver.solve(A, signal)
-            np.array_equal(signal, x)
-
+            assert np.array_equal(signal, x)
             assert info.solution_error == 0
             assert info.iter == 1
 
