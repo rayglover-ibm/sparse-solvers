@@ -1,2 +1,2 @@
-Ray Glover (ray@rayglover.net, ray.glover@uk.ibm.com)
+Ray Glover (gh@rayglover.net, ray.glover@uk.ibm.com)
 Cecilia Aas

@@ -1,18 +1,41 @@
-# Sparse Solvers
-_High performance L1 minimization solvers for Python and Tensorflow. (Work in progress.)_
-
-[![Build Status](https://travis-ci.org/rayglover-ibm/sparse-solvers.svg?branch=master)](https://travis-ci.org/rayglover-ibm/sparse-solvers)
+# Sparse Solvers &nbsp; [![Build Status](https://travis-ci.org/rayglover-ibm/sparse-solvers.svg?branch=master)](https://travis-ci.org/rayglover-ibm/sparse-solvers)
+_High performance l₁-minimization solvers for sparse recovery problems. (work in progress.)_
 
 ## Releases
 
-_(TODO)_
+__Python__ – The python binding is available as a package [on pypi](https://pypi.python.org/pypi/sparsesolvers) via pip install:
+
+```bash
+pip install sparsesolvers
+```
+__Examples__ – Python 
+
+```python
+import sparsesolvers as ss
+import numpy as np
+
+solver = ss.Homotopy()
+
+N=10
+A = np.random.normal(loc=0.025, scale=0.025, size=(N,N)) + np.identity(N)
+
+signal = np.zeros(N)
+signal[2] = 1
+
+x, info = solver.solve(A, signal, tolerance=0.1)
+
+# error=0.064195, sparsity=0.9
+print("error=%f, sparsity=%f" % (
+    info.solution_error, 1 - np.count_nonzero(x) / np.double(N)))
+```
+
+<br>
+
+---
 
 ## Setup, Build & test
 
-First, clone the repository and its submodules:
-
-    > git clone --recurse-submodules https://github.com/rayglover-ibm/sparse-solvers
-    > cd sparse-solvers
+Sparse solvers is also a c++14 library for your own projects. The python binding is a good example of how you can incorporate the solvers in to your own project.
 
 ### Requirements
 
@@ -26,17 +49,34 @@ At a minimum, you will need:
     | VS 2015    | gcc 5.3 / clang 3.6   | XCode 7.3 |
 
 
-### Build
+### Setup
 
-Build using CMake in the typical way:
+First, clone the repository and its submodules:
 
 ```bash
-> mkdir build && cd build
-> cmake ..
-> cmake --build . [--config Release]
+git clone --recurse-submodules https://github.com/rayglover-ibm/sparse-solvers
+cd sparse-solvers
 ```
 
-There are a number of _sparse-solvers_ specific CMake options:
+### Build
+
+Configure and build using CMake in the typical way:
+
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build . [--config Release]
+```
+
+Run the test suite and/or (if you've enabled them) benchmarks:
+
+```bash
+ctest -VV . [--config <config>]
+```
+
+### Build – Options
+
+There are a number of _sparse solvers_ specific CMake options:
 
 | CMake option                 | Description            | Default |
 |:-----------------------------|:-----------------------|:--------|
@@ -44,35 +84,20 @@ There are a number of _sparse-solvers_ specific CMake options:
 | `sparsesolvers_WITH_BENCHES` | Enable benchmarks      | OFF     |
 | `sparsesolvers_WITH_PYTHON`  | Enable python binding  | OFF     |
 
-Lastly, you might find some of these CMake options useful; I've included them here as a reference:
-
-| CMake option               | Description            | Default |
-|----------------------------|:-----------------------|:--------|
-| `OpenBLAS_microarch`       | OpenBLAS CPU microarchitecture to use | NEHALEM |
-| `PYTHON_EXECUTABLE:FILEPATH=<path-to-python-executable>` | Override the python location | <small>System specific</small> |
-
 ### Build – Python Package
 
 To build the python package (`.whl`) you will need the relevant Python development package, such as `python-dev` for Debian/Ubuntu. For Windows/Mac I recommend [Conda](https://conda.io/miniconda.html). To build the wheel:
 
 ```bash
-> mkdir build-py && cd build-py
-> cmake -Dsparsesolvers_WITH_PYTHON=ON ..
-> cmake --build . --target bdist_wheel [--config Release]
+mkdir build-py && cd build-py
+cmake -Dsparsesolvers_WITH_PYTHON=ON ..
+cmake --build . --target bdist_wheel [--config Release]
 ```
 
 Once the wheel has been created (usually in `build-py/bindings/python/dist`) you can install it with `pip` locally in the usual way:
 
 ```bash
-> pip install <path/to/sparsesolvers.whl>
-```
-
-### Tests / Benchmarks
-
-All tests and benchmarks can be run via CMake:
-
-```bash
->  ctest -C Release -VV
+pip install <path/to/sparsesolvers.whl>
 ```
 
 <br>
