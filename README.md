@@ -8,7 +8,8 @@ __Python__ – The python binding is available as a package [on pypi](https://py
 ```bash
 pip install sparsesolvers
 ```
-__Examples__ – Python 
+
+Here is an example usage:
 
 ```python
 import sparsesolvers as ss
