@@ -1,5 +1,5 @@
 # Sparse Solvers &nbsp; [![Build Status](https://travis-ci.org/rayglover-ibm/sparse-solvers.svg?branch=master)](https://travis-ci.org/rayglover-ibm/sparse-solvers)
-_High performance l₁-minimization solvers for sparse recovery problems. (work in progress.)_
+_High performance l₁-minimization solvers for sparse sensing and signal recovery problems. (work in progress.)_
 
 ## Releases
 
@@ -9,25 +9,28 @@ __Python__ – The python binding is available as a package [on pypi](https://py
 pip install sparsesolvers
 ```
 
-Here is an example usage:
+Here is a toy example:
 
 ```python
 import sparsesolvers as ss
 import numpy as np
 
-solver = ss.Homotopy()
+N = 10
 
-N=10
-A = np.random.normal(loc=0.025, scale=0.025, size=(N,N)) + np.identity(N)
+# create a (square) sensing matrix
+A = np.random.normal(loc=0.025, scale=0.025, size=(N, N)) + np.identity(N)
 
+# An incoming signal
 signal = np.zeros(N)
 signal[2] = 1
 
-x, info = solver.solve(A, signal, tolerance=0.1)
+# use the homotopy solver to produce solution, x.
+x, info = ss.Homotopy().solve(A, signal, tolerance=0.1)
 
-# error=0.064195, sparsity=0.9
-print("error=%f, sparsity=%f" % (
-    info.solution_error, 1 - np.count_nonzero(x) / np.double(N)))
+# example output: error=0.064195, sparsity=0.9, argmax=2
+print("error=%f, sparsity=%f, argmax=%i" % (
+    info.solution_error, 1 - np.count_nonzero(x) / np.double(N),
+    np.argmax(x)))
 ```
 
 <br>
@@ -36,7 +39,7 @@ print("error=%f, sparsity=%f" % (
 
 ## Setup, Build & test
 
-Sparse solvers is also a c++14 library for your own projects. The python binding is a good example of how you can incorporate the solvers in to your own project.
+Sparse solvers is also a c++14 library for your own projects. The python binding is a good example of how you can incorporate the solvers in to your own c++ projects with minimal effort.
 
 ### Requirements
 
