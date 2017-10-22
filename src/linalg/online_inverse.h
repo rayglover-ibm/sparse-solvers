@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.  */
 #pragma once
 
-#include "blas_wrapper.h"
+#include "linalg/blas_wrapper.h"
 #include "linalg/common.h"
 
 #include <ss/ndspan.h>
