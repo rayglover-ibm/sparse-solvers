@@ -51,21 +51,6 @@ namespace ss
     }
 
     /*
-     *  constructs a 1-d non-owning view of an stl-like container
-     */
-    template <typename C>
-    inline auto as_span(C& container)
-        -> std::enable_if_t<!xt::has_raw_data_interface<C>::value,
-                ndspan<typename C::value_type, 1>
-                >
-    {
-        auto* buf = container.data();
-        size_t len = container.size();
-
-        return detail::adapt(buf, len, std::array<size_t, 1>{ len });
-    }
-
-    /*
      *  constructs a n-d non-owning view of the given shape
      *  of an stl-like container
      */
@@ -142,9 +127,32 @@ namespace ss
                 >
     {
         auto* buf = t.raw_data() + t.raw_data_offset();
-        size_t len = t.size();
+        return detail::adapt(buf, t.size(), t.shape(), t.strides());
+    }
 
-        return detail::adapt(buf, len, t.shape(), t.strides());
+    template <class T>
+    inline auto as_span(const T& t)
+        -> std::enable_if_t<xt::has_raw_data_interface<T>::value,
+                const ndspan<typename T::value_type, std::tuple_size<typename T::shape_type>::value>
+                >
+    {
+        const auto* buf = t.raw_data() + t.raw_data_offset();
+        return detail::adapt(const_cast<typename T::value_type*>(buf), t.size(), t.shape(), t.strides());
+    }
+
+    /*
+     *  constructs a 1-d non-owning view of an stl-like container
+     */
+    template <typename C>
+    inline auto as_span(C& container)
+        -> std::enable_if_t<!xt::has_raw_data_interface<C>::value,
+                ndspan<typename C::value_type, 1>
+                >
+    {
+        auto* buf = container.data();
+        size_t len = container.size();
+
+        return detail::adapt(buf, len, std::array<size_t, 1>{ len });
     }
 
 

@@ -37,6 +37,16 @@ TEST(ndspan, 1d_constructors)
     EXPECT_EQ(spanB(0), 5);
 }
 
+TEST(ndspan, constness)
+{
+    std::array<float, 8> data{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    const ss::ndspan<float> spanA = ss::as_span(data);
+    const ss::ndspan<float> spanB = ss::as_span(spanA);
+
+    EXPECT_EQ(spanB.size(), spanA.size());
+    EXPECT_EQ(spanB, spanA);
+}
+
 TEST(ndspan, strides)
 {
     std::array<float, 9> data{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
