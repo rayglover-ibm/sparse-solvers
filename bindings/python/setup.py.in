@@ -15,7 +15,7 @@ setup(
     url          = 'https://github.com/rayglover-ibm/sparse-solvers',
     author       = 'IBM',
     author_email = 'gh@rayglover.net',
-    description  = 'High performance l₁-minimization solvers',
+    description  = 'High performance ℓ₁-minimization solvers',
     license      = 'Apache 2.0',
     keywords     = ['compressive sensing', 'sparsity', 'homotopy', 'blas'],
     classifiers  = [

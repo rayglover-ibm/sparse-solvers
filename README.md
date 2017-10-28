@@ -1,5 +1,5 @@
 # Sparse Solvers &nbsp; [![Build Status](https://travis-ci.org/rayglover-ibm/sparse-solvers.svg?branch=master)](https://travis-ci.org/rayglover-ibm/sparse-solvers)
-_High performance l₁-minimization solvers for sparse sensing and signal recovery problems. (work in progress.)_
+_High performance ℓ₁-minimization solvers for sparse sensing and signal recovery problems. (work in progress.)_
 
 ## Releases
 
@@ -78,7 +78,7 @@ Run the test suite and/or (if you've enabled them) benchmarks:
 ctest -VV . [--config <config>]
 ```
 
-### Build – Options
+### Build – _Options_
 
 There are a number of _sparse solvers_ specific CMake options:
 
@@ -88,7 +88,7 @@ There are a number of _sparse solvers_ specific CMake options:
 | `sparsesolvers_WITH_BENCHES` | Enable benchmarks      | OFF     |
 | `sparsesolvers_WITH_PYTHON`  | Enable python binding  | OFF     |
 
-### Build – Python Package
+### Build – _Python Package_
 
 To build the python package (`.whl`) you will need the relevant Python development package, such as `python-dev` for Debian/Ubuntu. For Windows/Mac I recommend [Conda](https://conda.io/miniconda.html). To build the wheel:
 
