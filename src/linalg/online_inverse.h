@@ -218,20 +218,18 @@ namespace ss
                 auto At = as_span<2>(_At.data(), { n, m });
 
                 dot = blas::xdot(row_span, row_span);
-                blas::xgemv<T>(CblasNoTrans, 1.0, At, row_span, 0.0, as_span(u1));
+                blas::xgemv<T>(CblasNoTrans, 1.0, At, row_span, 0.0, u1);
 
                 /* move the new row to the new row point */
                 std::rotate(_At.begin() + idx * m, row, _At.end());
             }
 
             xt::xtensor<T, 1> u2({ n }, xt::layout_type::row_major);
-
-            blas::xgemv<T>(CblasNoTrans, 1.0, inverse(),
-                as_span(u1), 0.0, as_span(u2));
+            blas::xgemv<T>(CblasNoTrans, 1.0, inverse(), u1, 0.0, u2);
 
             /* update existing inverse */
-            T d = T(1) / (dot - blas::xdot(as_span(u1), as_span(u2)));
-            blas::xger(d, as_span(u2), as_span(u2), inverse());
+            T d = T(1) / (dot - blas::xdot(u1, u2));
+            blas::xger(d, u2, u2, inverse());
 
             /* make space in the inverse */
             kernelpp::run<detail::insert_last_rowcol>(_inv, n, n, T(0));

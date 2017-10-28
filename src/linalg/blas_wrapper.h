@@ -135,6 +135,15 @@ namespace blas
             data(y), leading_stride(y));
     }
 
+    template <typename T, typename A, typename X, typename Y> void xgemv(
+        CBLAS_TRANSPOSE trans, T alpha,
+        const A& a,
+        const X& x, T beta,
+        Y& y)
+    {
+        xgemv(trans, alpha, as_span(a), as_span(x), beta, as_span(y));
+    }
+
 
     /* xger ---------------------------------------------------------------- */
 
@@ -168,6 +177,12 @@ namespace blas
             data(A), leading_stride(A));
     }
 
+    template <typename T, typename X, typename Y, typename A> void xger(
+        T alpha, const X& x, const Y& y, A& a)
+    {
+        xger(alpha, as_span(x), as_span(y), as_span(a));
+    }
+
 
     /* xdot ---------------------------------------------------------------- */
 
@@ -195,6 +210,10 @@ namespace blas
             data(y), leading_stride(y));
     }
 
+    template <typename X, typename Y> auto xdot(const X& x, const Y& y) {
+        return xdot(as_span(x), as_span(y));
+    }
+
 
     /* xscal --------------------------------------------------------------- */
 
@@ -213,6 +232,10 @@ namespace blas
     {
         using namespace detail;
         return xscal(dim<0>(x), alpha, leading_stride(x));
+    }
+
+    template <typename T, typename X> auto xscal(T alpha, X& x) {
+        return xscal(alpha, aspan(x));
     }
 
 

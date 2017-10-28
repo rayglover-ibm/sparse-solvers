@@ -94,8 +94,8 @@ namespace ss
     {
         xt::xtensor<T, 1> A_x = y;
 
-        blas::xgemv<T>(CblasNoTrans, -1.0, A, x_previous, 1.0, as_span(A_x));
-        blas::xgemv<T>(CblasTrans, 1.0, A, as_span(A_x), 0.0, c);
+        blas::xgemv<T>(CblasNoTrans, -1.0, A, x_previous, 1.0, A_x);
+        blas::xgemv<T>(CblasTrans,    1.0, A, A_x,        0.0, c);
     }
 
     template<typename T>
@@ -115,11 +115,11 @@ namespace ss
 
         /* p = Ad */
         auto p = xt::xtensor<T, 1>::from_shape({ m });
-        blas::xgemv<T>(CblasNoTrans, 1.0, A, direction, 0.0, as_span(p));
+        blas::xgemv<T>(CblasNoTrans, 1.0, A, direction, 0.0, p);
 
         /* q = transpose(A) p */
         auto q = xt::xtensor<T, 1>::from_shape({ n });
-        blas::xgemv<T>(CblasTrans, 1.0, A, as_span(p), 0.0, as_span(q));
+        blas::xgemv<T>(CblasTrans, 1.0, A, p, 0.0, q);
 
         /* evaluate the competing lists of terms */
         T min{ std::numeric_limits<T>::max() };
@@ -256,14 +256,14 @@ namespace ss
 
             /* update residual vector */
             residual_vector(A, y, x, as_span(c));
-            
+
             {   /* update direction vector */
-                /* produce a subset of c and convert to -1,0,+1 */
+                /* produce a subset of c and map to -1,0,+1 */
                 vec_subset(c, lambda_indices, c_gamma);
                 sign(as_span(c_gamma.storage_begin(), K), tolerance);
 
-                blas::xgemv<T>(CblasNoTrans, 1.0, inv.inverse(),
-                    as_span(c_gamma), 0.0, as_span(direction));
+                /* update */
+                blas::xgemv<T>(CblasNoTrans, 1.0, inv.inverse(), c_gamma, 0.0, direction);
 
                 /* expand the direction vector, filling with 0's where mask[i] == false */
                 expand(direction, lambda_indices);
