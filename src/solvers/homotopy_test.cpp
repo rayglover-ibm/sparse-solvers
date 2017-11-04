@@ -6,6 +6,7 @@
 #include <xtensor/xrandom.hpp>
 #include <xtensor/xview.hpp>
 #include <xtensor/xio.hpp>
+#include <xtensor/xeval.hpp>
 
 using xt::xtensor;
 using ss::as_span;
@@ -74,7 +75,7 @@ TEST(homotopy, sparse_signal_test)
 
     auto result = solver.solve(
         as_span(identity), as_span(signal), .001f, N, as_span(x));
-    
+
     ::check_report(result, .001f, N);
 }
 
@@ -131,8 +132,7 @@ TEST(homotopy, noisy_signal)
 
     for (uint32_t n = 0; n < N; n++)
     {
-        /* construct signal with some noise.
-           TODO(rayg): normalize? */
+        /* construct signal with some noise. */
         signal = xt::random::rand({N}, 0.0f, NOISE);
         signal[n] += 1.0f - (0.5f * NOISE);
 
@@ -155,62 +155,73 @@ TEST(homotopy, noisy_signal)
     }
 }
 
+namespace
+{
+    /* TODO(rayg) replace with xt::norm_l1 */
+    template <typename T>
+    void l1(ss::ndspan<T, 1> x)
+    {
+        T sum = xt::sum(xt::abs(x))();
+        xt::view(x, xt::all()) /= sum;
+    }
+}
+
 TEST(homotopy, noisy_patterns)
 {
     const uint32_t M = 25, N = 100;
     const int PATTERN = 3;
-    const float TOL = 0.1f;
+    const float NOISE = 0.01f;
 
     xt::random::seed(0);
 
     /* make some noise */
-    xtensor<float, 2> haystack = xt::random::randn({ M, N }, .5f, .1f);
+    xtensor<float, 2> noise = xt::random::randn({ M, N }, .5f, .1f);
 
     /* construct a noisy signal with a pattern */
     xtensor<float, 1> signal = xt::random::randn({ M }, .5f, .1f);
     xt::view(signal, xt::range(0, int(M), PATTERN /* step */)) += 1.0f;
+
+    ss::ndspan<float, 1> s = as_span(signal);
+    ::l1(s);
 
     ss::homotopy solver;
 
     int failures = 0;
     for (uint32_t n = 0; n < N; n++)
     {
-        /* insert a representation of the signal to search for */
+        xt::xtensor<float, 2> haystack = noise;
+
+        /* insert a representation of the signal to search for in the current column */
         auto needle = xt::view(haystack, xt::range(0, int(M), PATTERN /* step */), n);
         needle += 1.0f;
 
+        /* normalize the columns such that the sum of each column equals 1 */
+        ss::norm_l1(as_span(haystack));
+
         /* solve */
         xtensor<float, 1> x = xt::zeros<float>({ N });
-        auto result = solver.solve(as_span(haystack), as_span(signal), TOL, 25, as_span(x));
+        {
+            auto result = solver.solve(as_span(haystack), as_span(s), NOISE, N, as_span(x));
 
-        /* check solver statistics */
-        ::check_report(result, TOL, 25);
+            /* check solver statistics */
+            ::check_report(result, NOISE, N);
+        }
 
         /* argmax(x) == n */
         EXPECT_EQ(xt::amax(x)(), x[n]);
-        {
-            /* evaluate the sparse representation. */
-            xtensor<float, 1> expect = xt::zeros<float>({ N });
-            expect[n] = 1.0;
+        /* 95% sparsity */
+        EXPECT_LT(xt::nonzero(x).size(), int(N * 0.05));
 
-            if (!xt::isclose(x, expect, 1.0 /* relative */, TOL /* absolute */)()) {
-                std::cout << "Solution for signal " << n << " failed a sparisty test:\n" << x << "\n\n";
-                failures++;
-            }
-        }
         {
             /* reconstruct the signal given the sparse representation */
             xtensor<float, 1> y = xt::zeros<float>({ M });
             ss::reconstruct_signal(as_span(haystack), as_span(x), as_span(y));
 
-            if (!xt::isclose(x, y, 1.0 /* relative */, TOL /* absolute */)()) {
+            if (!xt::allclose(y, s, 0.0 /* relative */, 5 * NOISE /* absolute */)) {
                 std::cout << "Reconstruction of signal " << n << " failed.\n";
                 failures++;
             }
         }
-
-        /* remove the signal */
-        needle -= 1.0f;
     }
     EXPECT_EQ(failures, 0);
 }

@@ -19,7 +19,7 @@ TEST(norms, l1_matrix)
     };
 
     ss::l1(ss::as_span(A));
-    EXPECT_TRUE(xt::isclose(A, expect, 1.0, 0.001)());
+    EXPECT_TRUE(xt::allclose(A, expect, 0.0, 1e-4));
 }
 
 TEST(norms, l1_vector)
@@ -33,5 +33,5 @@ TEST(norms, l1_vector)
     };
 
     ss::l1(ss::as_span(x));
-    EXPECT_TRUE(xt::isclose(x, expect, 1.0, 0.001)());
+    EXPECT_TRUE(xt::allclose(x, expect, 0.0, 1e-4));
 }
