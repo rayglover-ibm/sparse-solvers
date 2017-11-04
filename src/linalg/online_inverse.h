@@ -22,10 +22,7 @@ limitations under the License.  */
 #include <kernelpp/kernel.h>
 #include <kernelpp/kernel_invoke.h>
 
-#include <memory>
 #include <cassert>
-#include <algorithm>
-#include <iterator>
 #include <cstring>
 
 namespace ss

@@ -14,10 +14,7 @@ limitations under the License.  */
 #pragma once
 
 #include "linalg/common.h"
-
-#include <memory>
 #include <xtensor/xview.hpp>
-#include <xtensor/xio.hpp>
 
 namespace ss
 {
