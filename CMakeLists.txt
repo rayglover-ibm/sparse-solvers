@@ -47,6 +47,7 @@ file (GENERATE
 target_include_directories (${ss}
     PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include"
             "${CMAKE_CURRENT_BINARY_DIR}/include"
+            "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xtl/include"
             "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xtensor/include"
             "$<TARGET_PROPERTY:kernelpp,INTERFACE_INCLUDE_DIRECTORIES>"
             "$<TARGET_PROPERTY:${blas_target},INTERFACE_INCLUDE_DIRECTORIES>"

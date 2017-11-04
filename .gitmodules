@@ -13,3 +13,6 @@
 [submodule "third_party/dlibxx"]
 	path = third_party/dlibxx
 	url = https://github.com/rayglover-ibm/libdlibxx
+[submodule "third_party/xtl"]
+	path = third_party/xtl
+	url = https://github.com/QuantStack/xtl

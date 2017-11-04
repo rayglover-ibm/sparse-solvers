@@ -27,7 +27,7 @@ namespace ss
      */
     template <typename T, size_t NDim = 1>
     using ndspan = xt::xtensor_adaptor<
-        xt::xbuffer_adaptor<T>, NDim, xt::layout_type::dynamic
+        xt::xbuffer_adaptor<T*>, NDim, xt::layout_type::dynamic
         >;
 
 
@@ -39,14 +39,14 @@ namespace ss
         auto adapt(T* data, size_t len, std::array<size_t, N> shape)
         {
             return xt::xadapt<T*, N, xt::no_ownership, xt::layout_type::dynamic>(
-                data, len, xt::no_ownership(), shape, xt::layout_type::row_major);
+                std::move(data), len, xt::no_ownership(), shape, xt::layout_type::row_major);
         }
 
         template <typename T, size_t N>
         auto adapt(T* data, size_t len, std::array<size_t, N> shape, std::array<size_t, N> strides)
         {
             return xt::xadapt<T*, N, xt::no_ownership>(
-                data, len, xt::no_ownership(), shape, strides);
+                std::move(data), len, xt::no_ownership(), shape, strides);
         }
     }
 
