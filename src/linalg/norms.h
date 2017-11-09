@@ -15,20 +15,20 @@ limitations under the License.  */
 
 #include "linalg/common.h"
 #include <xtensor/xview.hpp>
+#include <xtensor/xnorm.hpp>
 
 namespace ss
 {
     template <typename T>
     void l1(ndspan<T, 2> A)
     {
-        xt::xtensor<T, 1> sums = xt::sum(xt::abs(A), {0});
+        xt::xtensor<T, 1> sums = xt::norm_l1(A, {0});
         view(A) /= sums;
     }
 
     template <typename T>
     void l1(ndspan<T, 1> x)
     {
-        T sum = xt::sum(xt::abs(x))();
-        view(x) /= sum;
+        view(x) /= xt::norm_l1(x)();
     }
 }
