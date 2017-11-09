@@ -14,74 +14,57 @@ limitations under the License.  */
 
 #pragma once
 
+#include "ss/fwd.h"
 #include "ss/ndspan.h"
+#include "ss/policies.h"
+
 #include <kernelpp/types.h>
 
 namespace ss
 {
-    /* Solvers ------------------------------------------------------------- */
+    /* Solver base --------------------------------------------------------- */
 
-    struct homotopy_report
-    {
-        /* the number of iterations performed. */
-        std::uint32_t iter;
-
-        /* the solution error */
-        double solution_error;
+    template <typename SolverPolicy>
+    struct solver : private SolverPolicy
+    {   
+        /*  Uses the SolverPolicy to solve the equation
+         *    min || x || _1  subject to A x = y
+         *
+         *                 A : sensing matrix of row-major order
+         *                 y : signal vector of length m
+         *    max_iterations : maximum number of iterations
+         *         tolerance : sparsity budget
+         *                 x : the output sparse representation vector
+         *                     of length n
+         *
+         *    returns : an instance of SolverPolicy::report_type, or an error
+         */
+        template <typename T>
+        auto solve(
+            const ndspan<T, 2>  A,
+            const ndspan<T>     y,
+                  T             tolerance,
+                  std::uint32_t max_iterations,
+                  ndspan<T>     x) -> kernelpp::maybe<homotopy_report>;
     };
 
-    /* make std::variant happy */
-    inline bool operator== (const homotopy_report&, const homotopy_report&) { return false; }
+    /* Solver types  ------------------------------------------------------- */
 
-    /*  Uses the homotopy method to solve the equation
-        min || x || _1  subject to A x = y
-
-                     A : sensing matrix of row-major order
-                     y : signal vector of length m
-        max_iterations : maximum number of iterations
-             tolerance : sparsity budget
-                     x : the output sparse representation vector
-                         of length n
-
-        returns : an instance of homotopy_report, or an error
-    */
-    struct homotopy
-    {
-        homotopy();
-        ~homotopy();
-
-        kernelpp::maybe<homotopy_report> solve(
-            const ndspan<float, 2> A,
-            const ndspan<float>    y,
-                  float            tolerance,
-                  std::uint32_t    max_iterations,
-                  ndspan<float>    x);
-
-        kernelpp::maybe<homotopy_report> solve(
-            const ndspan<double, 2> A,
-            const ndspan<double>    y,
-                  double            tolerance,
-                  std::uint32_t     max_iterations,
-                  ndspan<double>    x);
-
-      private:
-        struct state;
-        std::unique_ptr<state> m;
-    };
+    using homotopy = solver<homotopy_policy>;
 
 
     /* Utilities ----------------------------------------------------------- */
 
     /*  computes A x
-        Reconstructs a signal given the sparse representation
-        of that signal.
-
-        A : input matrix A used to construct x
-        x : the sparse representation vector,
-            of length n
-        y : the output of the reconstructed signal,
-            of length m
-    */
+     *  Reconstructs a signal given the sparse representation
+     *  of that signal.
+     *
+     *    A : input matrix A used to construct x
+     *    x : the sparse representation vector,
+     *        of length n
+     *    y : the output of the reconstructed signal,
+     *        of length m
+     */
     void reconstruct_signal(
         const ndspan<float, 2> A, const ndspan<float> x, ndspan<float> y);
 
@@ -90,11 +73,30 @@ namespace ss
 
 
     /*  Normalizes the columns of a given matrix in-place according
-        to the L1-norm of each column.
-
-        A : input matrix A to be normalized
-    */
+     *  to the L1-norm of each column.
+     *
+     *    A : input matrix A to be normalized
+     */
     void norm_l1(ndspan<float, 2> A);
 
     void norm_l1(ndspan<double, 2> A);
+
+
+    /* Implementations ----------------------------------------------------- */
+    
+    template <typename S>
+    template <typename T>
+    auto solver<S>::solve(
+        const ndspan<T, 2>  A,
+        const ndspan<T>     y,
+              T             tolerance,
+              std::uint32_t max_iterations,
+              ndspan<T>     x) -> kernelpp::maybe<homotopy_report>
+    {
+        static_assert(
+            detail::is_solvable<S, T>::value,
+            "The specified type is not supported by the current solver"
+        );
+        return S::run(A, y, tolerance, max_iterations, x);
+    }
 }

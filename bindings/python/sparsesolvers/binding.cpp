@@ -75,7 +75,7 @@ namespace builders
                uint32_t maxiter = 100)
             {
                 auto x = py::array_t<T>(A.shape(1));
-                kernelpp::maybe<ss::homotopy_report> result = solver.solve(
+                kernelpp::maybe<ss::homotopy_report> result = solver.solve<T>(
                     ss::as_span<2>(A), ss::as_span<1>(b), tol, maxiter, ss::as_span<1>(x));
 
                 util::try_throw(result);
