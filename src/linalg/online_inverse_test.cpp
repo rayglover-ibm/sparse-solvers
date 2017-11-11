@@ -199,7 +199,7 @@ TEST(online_inverse, identity)
         inv.insert(k, col.cbegin(), col.cend());
 
         xt::xarray<float> b = xt::eye({k + 1u, k + 1u});
-        EXPECT_TRUE(xt::isclose(inv.inverse(), b, 1.0, .0)());
+        EXPECT_TRUE(xt::allclose(inv.inverse(), b, 0, 1e-4));
     }
 
     k = K-1;
@@ -210,7 +210,7 @@ TEST(online_inverse, identity)
         inv.remove(k);
 
         xt::xarray<float> b = xt::eye({k, k});
-        EXPECT_TRUE(xt::isclose(inv.inverse(), b, 1.0, .0)());
+        EXPECT_TRUE(xt::allclose(inv.inverse(), b, 0, 1e-4));
     }
 
     inv.remove(0);
