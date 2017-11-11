@@ -24,33 +24,41 @@ namespace ss
 {
     /* Solver base --------------------------------------------------------- */
 
-    template <typename SolverPolicy>
+    template <typename T, typename SolverPolicy>
     struct solver : private SolverPolicy
     {   
+        using solve_result = kernelpp::maybe<typename SolverPolicy::report_type>;
+        using state_type = typename SolverPolicy::template state_type<T>;
+
+        /* A : non-owning view of a sensing matrix */
+        solver(const ndspan<T, 2> A);
+
+        ~solver() = default;
+        
         /*  Uses the SolverPolicy to solve the equation
          *    min || x || _1  subject to A x = y
          *
-         *                 A : sensing matrix of row-major order
          *                 y : signal vector of length m
          *    max_iterations : maximum number of iterations
-         *         tolerance : sparsity budget
+         *               tol : sparsity budget
          *                 x : the output sparse representation vector
          *                     of length n
          *
          *    returns : an instance of SolverPolicy::report_type, or an error
          */
-        template <typename T>
-        auto solve(
-            const ndspan<T, 2>  A,
-            const ndspan<T>     y,
-                  T             tolerance,
-                  std::uint32_t max_iterations,
-                  ndspan<T>     x) -> kernelpp::maybe<homotopy_report>;
+        solve_result solve(
+            const ndspan<T> y, T tol, std::uint32_t max_iterations, ndspan<T> x);
+
+        solver(solver<T, SolverPolicy>&& other) : m{ std::move(other.m) } {}
+
+      private:
+        std::unique_ptr<state_type> m;
     };
 
     /* Solver types  ------------------------------------------------------- */
 
-    using homotopy = solver<homotopy_policy>;
+    template <typename T>
+    using homotopy = solver<T, homotopy_policy>;
 
 
     /* Utilities ----------------------------------------------------------- */
@@ -82,21 +90,24 @@ namespace ss
     void norm_l1(ndspan<double, 2> A);
 
 
-    /* Implementations ----------------------------------------------------- */
+    /* Definitions --------------------------------------------------------- */
     
-    template <typename S>
-    template <typename T>
-    auto solver<S>::solve(
-        const ndspan<T, 2>  A,
+    template <typename T, typename S>
+    solver<T, S>::solver(const ndspan<T, 2> A)
+        : m(std::make_unique<state_type>(A))
+    {}
+
+    template <typename T, typename S>
+    typename solver<T, S>::solve_result solver<T, S>::solve(
         const ndspan<T>     y,
               T             tolerance,
               std::uint32_t max_iterations,
-              ndspan<T>     x) -> kernelpp::maybe<homotopy_report>
+              ndspan<T>     x)
     {
         static_assert(
             detail::is_solvable<S, T>::value,
             "The specified type is not supported by the current solver"
         );
-        return S::run(A, y, tolerance, max_iterations, x);
+        return S::run(*m, y, tolerance, max_iterations, x);
     }
 }

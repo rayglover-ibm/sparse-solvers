@@ -64,26 +64,46 @@ namespace util
 
 namespace builders
 {
-    template <typename T, typename Solver>
-    void solve(py::class_<Solver>& solver)
+    using namespace ss;
+    
+    template <typename Policy>
+    struct py_solver
     {
-        solver.def("solve",
-            [](ss::homotopy& solver,
-               py::array_t<T> A,
+        std::array<size_t, 2> m_shape;
+        
+        kernelpp::variant<
+            solver<float, Policy>, solver<double, Policy>
+            > m;
+    };
+
+    template <typename T, typename P>
+    void init(py::class_<py_solver<P>>& cls)
+    {
+        cls.def(py::init([](py::array_t<T> A_) {
+            auto A = as_span<2>(A_);
+            return new py_solver<P>{ A.shape(), solver<T, homotopy_policy>(A) };
+        }));
+    }
+    
+    template <typename T, typename P>
+    void solve(py::class_<py_solver<P>>& cls)
+    {
+        cls.def("solve",
+            [](py_solver<P>& instance,
                py::array_t<T> b,
                T tol = std::numeric_limits<T>::epsilon() * 10,
                uint32_t maxiter = 100)
             {
-                auto x = py::array_t<T>(A.shape(1));
-                kernelpp::maybe<ss::homotopy_report> result = solver.solve<T>(
-                    ss::as_span<2>(A), ss::as_span<1>(b), tol, maxiter, ss::as_span<1>(x));
+                py::array_t<T> x(instance.m_shape[1]);
+
+                auto& s = instance.m.template get<solver<T, P>>();
+                auto result = s.solve(as_span<1>(b), tol, maxiter, as_span<1>(x));
 
                 util::try_throw(result);
-                return std::make_tuple(x, result.get<ss::homotopy_report>());
+                return std::make_tuple(x, result.template get<homotopy_report>());
             },
 
             "Execute the solver on the given inputs.",
-            py::arg("A").noconvert(),
             py::arg("b").noconvert(),
             py::arg("tolerance") = std::numeric_limits<T>::epsilon() * 10,
             py::arg("max_iterations") = 100);
@@ -102,7 +122,10 @@ PYBIND11_PLUGIN(binding)
         .def_readwrite("solution_error", &ss::homotopy_report::solution_error);
 
     /* homotopy solver */
-    auto homotopy = py::class_<ss::homotopy>(m, "Homotopy").def(py::init());
+    auto homotopy = py::class_< builders::py_solver<ss::homotopy_policy>>(m, "Homotopy");
+
+    builders::init<float>(homotopy);
+    builders::init<double>(homotopy);
     builders::solve<float>(homotopy);
     builders::solve<double>(homotopy);
 

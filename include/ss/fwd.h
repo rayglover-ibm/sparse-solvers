@@ -28,7 +28,7 @@ namespace ss {
         template <typename P, typename T>
         using solvable = decltype(
             declval<P>().run(
-                declval<ndspan<T, 2>>(),
+                declval<typename P::template state_type<T>&>(),
                 declval<ndspan<T>>(), T{0}, std::size_t{0},
                 declval<ndspan<T>>())
             );

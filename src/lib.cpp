@@ -26,10 +26,11 @@ namespace ss
     /* Homotopy solver ----------------------------------------------------- */
 
     homotopy_policy::homotopy_policy() = default;
+    homotopy_policy::homotopy_policy(homotopy_policy&&) = default;
     homotopy_policy::~homotopy_policy() = default;
 
     kernelpp::maybe<ss::homotopy_report> homotopy_policy::run(
-        const ndspan<float, 2> A,
+        const ndspan<float, 2>& A,
         const ndspan<float> y,
         float tol, uint32_t maxiter,
         ndspan<float> x)
@@ -38,7 +39,7 @@ namespace ss
     }
 
     kernelpp::maybe<ss::homotopy_report> homotopy_policy::run(
-        const ndspan<double, 2> A,
+        const ndspan<double, 2>& A,
         const ndspan<double> y,
         double tol, uint32_t maxiter,
         ndspan<double> x)

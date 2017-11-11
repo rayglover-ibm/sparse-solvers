@@ -40,7 +40,7 @@ TEST(homotopy, smoke_test)
     xtensor<float, 1> signal   = xt::zeros<float>({N});
     xtensor<float, 1> x        = xt::zeros<float>({N});
 
-    ss::homotopy solver;
+    ss::homotopy<float> solver(as_span(identity));
 
     /* for each column in the identity matrix */
     for (uint32_t n = 0; n < N; n++)
@@ -52,9 +52,7 @@ TEST(homotopy, smoke_test)
         /* sparse representation */
         ss::view(x) = 0.0f;
 
-        auto result = solver.solve(
-            as_span(identity), as_span(signal), .001f, N, as_span(x));
-
+        auto result = solver.solve(as_span(signal), .001f, N, as_span(x));
         ::check_report(result, .001f, N);
 
         /* resulting sparse respresentation should be exactly
@@ -71,11 +69,9 @@ TEST(homotopy, sparse_signal_test)
     xtensor<float, 1> signal   = xt::zeros<float>({N});
     xtensor<float, 1> x        = xt::zeros<float>({N});
 
-    ss::homotopy solver;
+    ss::homotopy<float> solver(as_span(identity));
 
-    auto result = solver.solve(
-        as_span(identity), as_span(signal), .001f, N, as_span(x));
-
+    auto result = solver.solve(as_span(signal), .001f, N, as_span(x));
     ::check_report(result, .001f, N);
 }
 
@@ -101,7 +97,7 @@ TEST(homotopy, smoke_test_column_subset)
     xtensor<float, 1> signal = xt::zeros<float>({ M });
     xtensor<float, 1> x      = xt::zeros<float>({ M });
 
-    ss::homotopy solver;
+    ss::homotopy<float> solver(as_span(identity));
 
     /* for each column we are interested in */
     for (uint32_t n = 0; n < dim<1>(identity); n++)
@@ -110,9 +106,7 @@ TEST(homotopy, smoke_test_column_subset)
         ss::view(signal) = xt::view(identity, xt::all(), n);
         ss::view(x) = 0.0f;
 
-        auto result = solver.solve(
-            as_span(identity), as_span(signal), .001f, N, as_span(x));
-
+        auto result = solver.solve(as_span(signal), .001f, N, as_span(x));
         EXPECT_EQ(x, signal);
     }
 }
@@ -128,7 +122,7 @@ TEST(homotopy, noisy_signal)
     xtensor<float, 1> signal   = xt::zeros<float>({N});
     xtensor<float, 1> x        = xt::zeros<float>({N});
 
-    ss::homotopy solver;
+    ss::homotopy<float> solver(as_span(identity));
 
     for (uint32_t n = 0; n < N; n++)
     {
@@ -139,9 +133,7 @@ TEST(homotopy, noisy_signal)
         /* sparse representation */
         ss::view(x) = 0.0f;
 
-        auto result = solver.solve(
-            as_span(identity), as_span(signal), NOISE, N, as_span(x));
-
+        auto result = solver.solve(as_span(signal), NOISE, N, as_span(x));
         ::check_report(result, NOISE, N);
 
         /* The solution should be sparse.
@@ -184,8 +176,6 @@ TEST(homotopy, noisy_patterns)
     ss::ndspan<float, 1> s = as_span(signal);
     ::l1(s);
 
-    ss::homotopy solver;
-
     int failures = 0;
     for (uint32_t n = 0; n < N; n++)
     {
@@ -201,9 +191,9 @@ TEST(homotopy, noisy_patterns)
         /* solve */
         xtensor<float, 1> x = xt::zeros<float>({ N });
         {
-            auto result = solver.solve(as_span(haystack), as_span(s), NOISE, N, as_span(x));
+            auto result = ss::homotopy<float>(as_span(haystack))
+                .solve(as_span(s), NOISE, N, as_span(x));
 
-            /* check solver statistics */
             ::check_report(result, NOISE, N);
         }
 

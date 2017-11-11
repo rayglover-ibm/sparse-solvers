@@ -31,18 +31,22 @@ namespace ss
     /* make std::variant happy */
     inline bool operator== (const homotopy_report&, const homotopy_report&) { return false; }
 
-    /*  A solver policy which implements the homotopy method */
+    /* A solver policy which implements the homotopy method */
     struct homotopy_policy
     {
         using report_type = homotopy_report;
         
+        template <typename T> using state_type = const ndspan<T, 2>;
+        
         kernelpp::maybe<homotopy_report> run(
-            const ndspan<float, 2>, const ndspan<float>, float, std::uint32_t, ndspan<float>);
+            state_type<float>&, const ndspan<float>, float, std::uint32_t, ndspan<float>);
 
         kernelpp::maybe<homotopy_report> run(
-            const ndspan<double, 2>, const ndspan<double>, double, std::uint32_t, ndspan<double>);
+            state_type<double>&, const ndspan<double>, double, std::uint32_t, ndspan<double>);
 
         homotopy_policy();
+        homotopy_policy(homotopy_policy&&);
+
         ~homotopy_policy();
     };
 }

@@ -28,7 +28,7 @@ namespace
         xtensor<float, 1> signal = xt::random::randn({ M }, .5f, .1f);
         xt::view(signal, xt::range(0, int(M), PATTERN /* step */)) += 1.0f;
 
-        ss::homotopy solver;
+        ss::homotopy<float> solver(as_span(haystack));
         int iters = 0, i = 0;
 
         while (state.KeepRunning())
@@ -40,7 +40,7 @@ namespace
             needle += 1.0f;
 
             xtensor<float, 1> x = xt::zeros<float>({ N });
-            auto result = solver.solve(as_span(haystack), as_span(signal), TOL, N, as_span(x));
+            auto result = solver.solve(as_span(signal), TOL, N, as_span(x));
 
             iters += result.get_unchecked<ss::homotopy_report>().iter;
 
@@ -58,5 +58,3 @@ BENCHMARK(homotopy_bench)
     ->RangeMultiplier(4)
     ->Unit(benchmark::kMillisecond)
     ->Ranges({ { 16, 8 << 6 } /* M */, { 16, 8 << 8 } } /* N */);
-
-BENCHMARK_MAIN();
