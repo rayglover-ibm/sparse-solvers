@@ -82,6 +82,7 @@ if (${ss}_WITH_TESTS)
         "src/solvers/homotopy_test.cpp"
         "src/linalg/rank_index_test.cpp"
         "src/linalg/online_inverse_test.cpp"
+        "src/linalg/qr_decomposition_test.cpp"
         "src/linalg/norms_test.cpp"
     )
     target_include_directories ("${ss}_test"
@@ -120,7 +121,14 @@ if (${ss}_WITH_BENCHES)
     )
     set (BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Enable Googlebench test suite" FORCE)
     add_subdirectory ("${googlebench_SOURCE_DIR}" "${googlebench_BINARY_DIR}")
-    add_executable ("${ss}_benches" "src/solvers/homotopy_bench.cpp")
+    add_executable ("${ss}_benches"
+        "src/linalg/qr_decomposition_bench.cpp"
+        "src/solvers/homotopy_bench.cpp"
+        "src/lib_bench.cpp"
+    )
+    target_include_directories ("${ss}_benches"
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
     set_rpath ("${ss}_benches" "$ORIGIN/")
     copy_target_files ("${ss}_benches" "${ss}")
     target_link_libraries ("${ss}_benches" "${ss}" benchmark)

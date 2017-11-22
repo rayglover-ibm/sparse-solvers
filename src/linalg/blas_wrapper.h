@@ -40,6 +40,8 @@ namespace blas
         op<decltype(::cblas_snrm2)>  snrm2 { this, "cblas_snrm2" };
         op<decltype(::cblas_dgemv)>  dgemv { this, "cblas_dgemv" };
         op<decltype(::cblas_sgemv)>  sgemv { this, "cblas_sgemv" };
+        op<decltype(::cblas_sgemm)>  sgemm { this, "cblas_sgemm" };
+        op<decltype(::cblas_dgemm)>  dgemm { this, "cblas_dgemm" };
         op<decltype(::cblas_dger)>   dger  { this, "cblas_dger" };
         op<decltype(::cblas_sger)>   sger  { this, "cblas_sger" };
         op<decltype(::cblas_ddot)>   ddot  { this, "cblas_ddot" };
@@ -104,7 +106,7 @@ namespace blas
     /* xgemv --------------------------------------------------------------- */
 
     inline void xgemv(
-        const CBLAS_ORDER order,
+        const enum CBLAS_ORDER order,
         const enum CBLAS_TRANSPOSE trans, const blasint m, const blasint n,
         const double alpha, const double *a, const blasint lda, const double *x,
         const blasint incx, const double beta, double *y, const blasint incy)
@@ -113,7 +115,7 @@ namespace blas
     }
 
     inline void xgemv(
-        const CBLAS_ORDER order,
+        const enum CBLAS_ORDER order,
         const enum CBLAS_TRANSPOSE trans, const blasint m, const blasint n,
         const float alpha, const float *a, const blasint lda, const float *x,
         const blasint incx, const float beta, float *y, const blasint incy)
@@ -136,12 +138,85 @@ namespace blas
     }
 
     template <typename T, typename A, typename X, typename Y> void xgemv(
-        CBLAS_TRANSPOSE trans, T alpha,
+        const enum CBLAS_TRANSPOSE trans, T alpha,
         const A& a,
         const X& x, T beta,
         Y& y)
     {
         xgemv(trans, alpha, as_span(a), as_span(x), beta, as_span(y));
+    }
+
+    template <typename T, typename A, typename X> xt::xtensor<T, 1> xgemv(
+        const enum CBLAS_TRANSPOSE trans, T alpha,
+        const A& a,
+        const X& x)
+    {
+        auto y = xt::xtensor<T, 1>::from_shape({ trans == CblasNoTrans ? dim<0>(a) : dim<1>(a) });
+        xgemv(trans, alpha, as_span(a), as_span(x), T{0}, as_span(y));
+        return y;
+    }
+
+
+    /* xgemm --------------------------------------------------------------- */
+
+    inline void xgemm(
+        const CBLAS_ORDER order,
+        const enum CBLAS_TRANSPOSE transA, const enum CBLAS_TRANSPOSE transB,
+        const blasint m, const blasint n, const blasint k,
+        const float alpha, const float *a, const blasint lda,
+        const float *b, const blasint ldb, const float beta,
+        float *c, const blasint ldc)
+    {
+        cblas::get()->sgemm(order, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+    }
+
+    inline void xgemm(
+        const CBLAS_ORDER order,
+        const enum CBLAS_TRANSPOSE transA, const enum CBLAS_TRANSPOSE transB,
+        const blasint m, const blasint n, const blasint k,
+        const double alpha, const double *a, const blasint lda,
+        const double *b, const blasint ldb, const double beta,
+        double *c, const blasint ldc)
+    {
+        cblas::get()->dgemm(order, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+    }
+
+    template <typename T> void xgemm(
+        CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, T alpha,
+        const ndspan<T, 2> a,
+        const ndspan<T, 2> b, T beta,
+        ndspan<T, 2> c)
+    {
+        using namespace detail;
+        auto k = transA == CblasNoTrans ? dim<1>(a) : dim<0>(a);
+
+        xgemm(order(a), transA, transB, dim<0>(c), dim<1>(c), k, alpha,
+            data(a), leading_stride(a),
+            data(b), leading_stride(b), beta,
+            data(c), leading_stride(c));
+    }
+
+    template <typename T, typename A, typename B, typename C> void xgemm(
+        CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, T alpha,
+        const A& a,
+        const B& b, T beta,
+        C& c)
+    {
+        xgemm(transA, transB, alpha, as_span(a), as_span(b), beta, as_span(c));
+    }
+
+    template <typename T, typename A, typename B> xt::xtensor<T, 2> xgemm(
+        CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB, T alpha,
+        const A& a,
+        const B& b)
+    {
+        xt::xtensor<T, 2> c({
+            transA == CblasNoTrans ? dim<0>(a) : dim<1>(a),
+            transB == CblasNoTrans ? dim<1>(b) : dim<0>(b)
+        });
+
+        xgemm(transA, transB, alpha, as_span(a), as_span(b), T{0}, as_span(c));
+        return c;
     }
 
 
