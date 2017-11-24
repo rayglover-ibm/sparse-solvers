@@ -186,7 +186,7 @@ namespace ss
 
     template <typename T>
     homotopy_report run_solver(
-        const mat_view<T>& A,
+        const ndspan<T, 2> A,
         const std::uint32_t max_iter,
         const T tolerance,
         const ndspan<T> y,

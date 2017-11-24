@@ -60,6 +60,9 @@ namespace ss
     template <typename T>
     using homotopy = solver<T, homotopy_policy>;
 
+    template <typename T>
+    using irlq = solver<T, irlq_policy>;
+
 
     /* Utilities ----------------------------------------------------------- */
 
