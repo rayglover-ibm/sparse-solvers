@@ -3,6 +3,7 @@
 #include <xtensor/xbuilder.hpp>
 #include <xtensor/xeval.hpp>
 #include <xtensor/xnoalias.hpp>
+#include <xtensor/xio.hpp>
 
 #include <gtest/gtest.h>
 #include <array>
@@ -81,11 +82,37 @@ TEST(ndspan, xtensor_compatibility)
     auto d = xt::diag(x);
     auto&& e = xt::eval(d);
 
-    ss::ndspan<float, 2> spanA { ss::as_span(e) };
+    ss::ndspan<float, 2> span { ss::as_span(e) };
 
-    EXPECT_EQ(1, spanA(0, 0));
-    EXPECT_EQ(4, spanA(3, 3));
+    EXPECT_EQ(1, span(0, 0));
+    EXPECT_EQ(4, span(3, 3));
 
-    xt::noalias(spanA) = xt::ones<float>({ 4u, 4u });
-    EXPECT_EQ(1, spanA(3, 3));
+    xt::noalias(span) = xt::ones<float>({ 4u, 4u });
+    EXPECT_EQ(1, span(3, 3));
+}
+
+TEST(ndspan, xview_compatibility)
+{
+    xt::xtensor<float, 2> A{
+        {1, 2},
+        {3, 4},
+        {5, 6}
+    };
+    {
+        auto row = xt::view(A, 1, xt::all());
+        ss::ndspan<float, 1> span = ss::as_span(row);
+
+        EXPECT_EQ(2, row.shape()[0]);
+        EXPECT_EQ(3, span(0));
+        EXPECT_EQ(4, span(1));
+    }
+    {
+        auto col = xt::view(A, xt::all(), 1);
+        ss::ndspan<float, 1> span = ss::as_span(col);
+
+        EXPECT_EQ(3, span.shape()[0]);
+        EXPECT_EQ(2, span(0));
+        EXPECT_EQ(4, span(1));
+        EXPECT_EQ(6, span(2));
+    }
 }
