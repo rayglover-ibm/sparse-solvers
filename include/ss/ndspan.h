@@ -38,14 +38,14 @@ namespace ss
         template <typename T, size_t N>
         auto adapt(T* data, size_t len, std::array<size_t, N> shape)
         {
-            return xt::xadapt<T*, N, xt::no_ownership, xt::layout_type::dynamic>(
+            return xt::adapt<T*, xt::no_ownership, std::array<size_t, N>, xt::layout_type::dynamic>(
                 std::move(data), len, xt::no_ownership(), shape, xt::layout_type::row_major);
         }
 
         template <typename T, size_t N>
         auto adapt(T* data, size_t len, std::array<size_t, N> shape, std::array<size_t, N> strides)
         {
-            return xt::xadapt<T*, N, xt::no_ownership>(
+            return xt::adapt<T*, xt::no_ownership>(
                 std::move(data), len, xt::no_ownership(), shape, strides);
         }
     }
