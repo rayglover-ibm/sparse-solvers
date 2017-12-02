@@ -50,6 +50,10 @@ namespace blas
         op<decltype(::cblas_sscal)>  sscal { this, "cblas_sscal" };
         op<decltype(::cblas_idamax)> idamax{ this, "cblas_idamax" };
         op<decltype(::cblas_isamax)> isamax{ this, "cblas_isamax" };
+        op<decltype(::cblas_strsm)>  strsm { this, "cblas_strsm" };
+        op<decltype(::cblas_dtrsm)>  dtrsm { this, "cblas_dtrsm" };
+        op<decltype(::cblas_strsv)>  strsv { this, "cblas_strsv" };
+        op<decltype(::cblas_dtrsv)>  dtrsv { this, "cblas_dtrsv" };
 
         static cblas* get();
     };
@@ -302,17 +306,16 @@ namespace blas
         cblas::get()->sscal(N, alpha, X, incX);
     }
 
-    template <typename T> T xscal(
+    template <typename T> void xscal(
         T alpha, ndspan<T, 1> x)
     {
         using namespace detail;
-        return xscal(dim<0>(x), alpha, leading_stride(x));
+        xscal(dim<0>(x), alpha, data(x), leading_stride(x));
     }
 
-    template <typename T, typename X> auto xscal(T alpha, X& x) {
-        return xscal(alpha, aspan(x));
+    template <typename T, typename X> void xscal(T alpha, X& x) {
+        xscal(alpha, as_span(x));
     }
-
 
     /* ixamax -------------------------------------------------------------- */
 
@@ -324,6 +327,76 @@ namespace blas
     inline size_t ixamax(
         const blasint n, const float *x, const blasint incx) {
         return cblas::get()->isamax(n, x, incx);
+    }
+
+
+    /* xtrsm ---------------------------------------------------------------- */
+
+    inline void xtrsm(
+        const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
+        const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
+        const enum CBLAS_DIAG diag,
+        const blasint m, const blasint n,
+        const float alpha, const float *A, const blasint lda,
+        float *B, const blasint ldb)
+    {
+        cblas::get()->strsm(order, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb);
+    }
+
+    inline void xtrsm(
+        const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
+        const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
+        const enum CBLAS_DIAG diag,
+        const blasint m, const blasint n,
+        const double alpha, const double *A, const blasint lda,
+        double *B, const blasint ldb)
+    {
+        cblas::get()->dtrsm(order, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb);
+    }
+
+    template <typename T> void xtrsm(
+        const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+        const enum CBLAS_TRANSPOSE trans, const enum CBLAS_DIAG diag,
+        const T alpha, const ndspan<T, 2> A, ndspan<T, 1> b)
+    {
+        using namespace detail;
+
+        xtrsm(order(A), side, uplo, trans, diag,
+            dim<0>(b), 1, alpha, data(A), leading_stride(A),
+            data(b), 1);
+    }
+
+
+    /* xtrsv ---------------------------------------------------------------- */
+
+    inline void xtrsv(
+        const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+        const enum CBLAS_TRANSPOSE trans, const enum CBLAS_DIAG diag,
+        const blasint n, const float *A, const blasint lda,
+        float *x, const blasint incx)
+    {
+        cblas::get()->strsv(order, uplo, trans, diag, n, A, lda, x, incx);
+    }
+
+    inline void xtrsv(
+        const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo,
+        const enum CBLAS_TRANSPOSE trans, const enum CBLAS_DIAG diag,
+        const blasint n, const double *A, const blasint lda,
+        double *x, const blasint incx)
+    {
+        cblas::get()->dtrsv(order, uplo, trans, diag, n, A, lda, x, incx);
+    }
+
+    template <typename T> void xtrsv(
+        const enum CBLAS_UPLO uplo,
+        const enum CBLAS_TRANSPOSE trans, const enum CBLAS_DIAG diag,
+        const ndspan<T, 2> A, ndspan<T, 1> b)
+    {
+        using namespace detail;
+
+        xtrsv(order(A), uplo, trans, diag,
+            dim<1>(A), data(A), leading_stride(A),
+            data(b), 1);
     }
 }
 }

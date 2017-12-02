@@ -18,9 +18,7 @@ limitations under the License.  */
 
 #include <ss/ndspan.h>
 #include <xtensor/xtensor.hpp>
-
-#include <kernelpp/kernel.h>
-#include <kernelpp/kernel_invoke.h>
+#include <cassert>
 
 namespace ss
 {
@@ -35,7 +33,7 @@ namespace ss
     class qr_decomposition
     {
       public:
-        qr_decomposition(ndspan<T, 2> A);
+        qr_decomposition(const ndspan<T, 2> A);
 
         xt::xtensor<T, 2> q() const;
         xt::xtensor<T, 2> r() const;
@@ -47,10 +45,10 @@ namespace ss
          *    - X is the matrix that minimizes the two norm of A*X-B, i.e. it
          *      minimizes sum(squared(A*X - B)).
          */
-        void solve(const ndspan<T> b, ndspan<T> x);
+        void solve(const ndspan<T> b, ndspan<T> x) const;
 
         template <typename B, typename X>
-        void solve(const B& b, X& x) { solve(as_span(b), as_span(x)); }
+        void solve(const B& b, X& x) const { solve(as_span(b), as_span(x)); }
 
       private:
         xt::xtensor<T, 2> _qr;
@@ -70,11 +68,11 @@ namespace ss{ namespace detail
     {
         auto M = dim<0>(A);
         auto N = dim<1>(A);
-        
+
         if (n < N) {
             nrm2 = T{0};
             if (n > 0) { A(n-1, n-1) = hvec(n-1); }
-            
+
             for (int64_t m = n; m < M; m++) {
                 T& hm = hvec(m);
                 if (n > 0) { A(m, n-1) = hm; }
@@ -93,7 +91,7 @@ namespace ss{ namespace detail
 namespace ss
 {
     template <typename T>
-    qr_decomposition<T>::qr_decomposition(ndspan<T, 2> A)
+    qr_decomposition<T>::qr_decomposition(const ndspan<T, 2> A)
         : _qr(A)
         , _rdiag({ dim<1>(A) }, xt::layout_type::row_major)
     {
@@ -190,7 +188,7 @@ namespace ss
     }
 
     template <typename T>
-    void qr_decomposition<T>::solve(const ndspan<T> b, ndspan<T> x)
+    void qr_decomposition<T>::solve(const ndspan<T> b, ndspan<T> x) const
     {
         const int64_t M = dim<0>(_qr);
         const int64_t N = dim<1>(_qr);
@@ -203,7 +201,7 @@ namespace ss
         for (int64_t n = 0; n < N; n++) {
             T w{0};
             for (int64_t m = n; m < M; m++) {
-                // lower triangular
+                /* lower triangular */
                 w += _qr(m, n) * s(m);
             }
 

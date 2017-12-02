@@ -11,6 +11,28 @@ using xt::xtensor;
 using ss::mat;
 using ss::dim;
 
+TEST(qr_decomposition, 2x2)
+{
+    const xtensor<float, 2> A{
+        { 1, -1},
+        {-1,  1}
+    };
+
+    const xtensor<float, 1> b{1, -1};
+    const xtensor<float, 1> x_expect{0, -1};
+
+    {
+        SCOPED_TRACE("Ax = b");
+
+        ss::qr_decomposition<float> QR{ ss::as_span(A) };
+
+        xtensor<float, 1> x{ 0, 0 };
+        QR.solve(b, x);
+
+        EXPECT_TRUE(xt::allclose(x, x_expect, 0.0f, 1e-4));
+    }
+}
+
 namespace
 {
     template <typename T>
@@ -46,28 +68,6 @@ namespace
     {
         xtensor<T, 2> noise = xt::random::randn({ M, N }, 10.0f, 2.5f);
         ::test_decomposition(ss::as_span(noise), T(1e-4f));
-    }
-}
-
-TEST(qr_decomposition, 2x2)
-{
-    const xtensor<float, 2> A{
-        { 1, -1},
-        {-1,  1}
-    };
-
-    const xtensor<float, 1> b{1, -1};
-    const xtensor<float, 1> x_expect{0, -1};
-
-    {
-        SCOPED_TRACE("Ax = b");
-
-        ss::qr_decomposition<float> QR{ ss::as_span(A) };
-
-        xtensor<float, 1> x{ 0, 0 };
-        QR.solve(b, x);
-
-        EXPECT_TRUE(xt::allclose(x, x_expect, 0.0f, 1e-4));
     }
 }
 

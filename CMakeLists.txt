@@ -83,6 +83,7 @@ if (${ss}_WITH_TESTS)
         "src/linalg/rank_index_test.cpp"
         "src/linalg/online_inverse_test.cpp"
         "src/linalg/qr_decomposition_test.cpp"
+        "src/linalg/cholesky_decomposition_test.cpp"
         "src/linalg/norms_test.cpp"
     )
     target_include_directories ("${ss}_test"
@@ -123,6 +124,7 @@ if (${ss}_WITH_BENCHES)
     add_subdirectory ("${googlebench_SOURCE_DIR}" "${googlebench_BINARY_DIR}")
     add_executable ("${ss}_benches"
         "src/linalg/qr_decomposition_bench.cpp"
+        "src/linalg/cholesky_decomposition_bench.cpp"
         "src/solvers/homotopy_bench.cpp"
         "src/lib_bench.cpp"
     )
