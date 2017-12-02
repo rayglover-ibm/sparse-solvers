@@ -20,6 +20,7 @@ limitations under the License.  */
 #include "linalg/common.h"
 #include "linalg/norms.h"
 #include "linalg/blas_wrapper.h"
+#include "linalg/qr_decomposition.h"
 
 namespace ss
 {
@@ -46,6 +47,24 @@ namespace ss
     {
         return kernelpp::run<solve_homotopy>(A, y, tol, maxiter, x);
     }
+
+
+    /* IRLS solver --------------------------------------------------------- */
+
+    irlq_state::irlq_state(const ndspan<float, 2> A)
+    {
+        ss::qr_decomposition<float> qr(A);
+        Q = qr.q();
+    }
+
+    irlq_state::irlq_state(const ndspan<double, 2> A)
+    {
+        ss::qr_decomposition<double> qr(A);
+        Q = qr.q();
+    }
+        
+    irlq_state::~irlq_state() = default;
+      
 
     /* Utils --------------------------------------------------------------- */
 
