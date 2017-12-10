@@ -1,4 +1,5 @@
 #include <ss/ss.h>
+#include "test_util.h"
 
 #include <gtest/gtest.h>
 
@@ -34,31 +35,8 @@ namespace
 
 TEST(homotopy, smoke_test)
 {
-    const uint32_t N = 5;
-
-    xtensor<float, 2> identity = xt::eye(N);
-    xtensor<float, 1> signal   = xt::zeros<float>({N});
-    xtensor<float, 1> x        = xt::zeros<float>({N});
-
-    ss::homotopy<float> solver(as_span(identity));
-
-    /* for each column in the identity matrix */
-    for (uint32_t n = 0; n < N; n++)
-    {
-        /* construct signal */
-        ss::view(signal) = 0.0f;
-        signal[n] = 1.0f;
-
-        /* sparse representation */
-        ss::view(x) = 0.0f;
-
-        auto result = solver.solve(as_span(signal), .001f, N, as_span(x));
-        ::check_report(result, .001f, N);
-
-        /* resulting sparse respresentation should be exactly
-           equal to the input signal */
-        EXPECT_EQ(x, signal);
-    }
+    ::smoke_test<ss::irls, float>();
+    ::smoke_test<ss::irls, double>();
 }
 
 TEST(homotopy, sparse_signal_test)

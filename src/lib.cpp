@@ -16,6 +16,7 @@ limitations under the License.  */
 
 #include "ss/ss.h"
 #include "solvers/homotopy.h"
+#include "solvers/irls.h"
 
 #include "linalg/common.h"
 #include "linalg/norms.h"
@@ -51,19 +52,33 @@ namespace ss
 
     /* IRLS solver --------------------------------------------------------- */
 
-    irlq_state::irlq_state(const ndspan<float, 2> A)
-    {
-        ss::qr_decomposition<float> qr(A);
-        Q = qr.q();
+    irls_state::irls_state(const ndspan<float, 2> A) {
+        QR = ss::qr_decomposition<float>(A);
     }
 
-    irlq_state::irlq_state(const ndspan<double, 2> A)
-    {
-        ss::qr_decomposition<double> qr(A);
-        Q = qr.q();
+    irls_state::irls_state(const ndspan<double, 2> A) {
+        QR = ss::qr_decomposition<double>(A);
     }
         
-    irlq_state::~irlq_state() = default;
+    irls_state::~irls_state() = default;
+
+    irls_policy::irls_policy() = default;
+    irls_policy::irls_policy(irls_policy&&) = default;
+    irls_policy::~irls_policy() = default;
+
+    kernelpp::maybe<irls_report> irls_policy::run(
+        irls_state& state, const ndspan<float> y, float tol, uint32_t maxiter, ndspan<float> x)
+    {
+        auto& qr = xtl::any_cast<qr_decomposition<float>&>(state.QR);
+        return kernelpp::run<solve_irls>(qr, y, tol, maxiter, x);
+    }
+
+    kernelpp::maybe<irls_report> irls_policy::run(
+        irls_state& state, const ndspan<double> y, double tol, uint32_t maxiter, ndspan<double> x)
+    {
+        auto& qr = xtl::any_cast<qr_decomposition<double>&>(state.QR);
+        return kernelpp::run<solve_irls>(qr, y, tol, maxiter, x);
+    }
       
 
     /* Utils --------------------------------------------------------------- */

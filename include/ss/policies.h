@@ -15,8 +15,8 @@ limitations under the License.  */
 #pragma once
 
 #include "ss/ndspan.h"
-
 #include <kernelpp/types.h>
+#include <xtl/xany.hpp>
 
 namespace ss
 {
@@ -53,9 +53,9 @@ namespace ss
         ~homotopy_policy();
     };
 
-    /* IRLQ ---------------------------------------------------------------- */
+    /* IRLS ---------------------------------------------------------------- */
 
-    struct irlq_report
+    struct irls_report
     {
         /* the number of iterations performed. */
         uint32_t iter;
@@ -65,38 +65,35 @@ namespace ss
     };
 
     /* make std::variant happy */
-    inline bool operator== (const irlq_report&, const irlq_report&) { return false; }
+    inline bool operator== (const irls_report&, const irls_report&) { return false; }
 
     /* */
-    struct irlq_state
+    struct irls_state
     {
-        irlq_state(const ndspan<float, 2>);
-        irlq_state(const ndspan<double, 2>);
+        irls_state(const ndspan<float, 2>);
+        irls_state(const ndspan<double, 2>);
         
-        ~irlq_state();
+        ~irls_state();
         
-        /* orthogonal matrix q */
-        kernelpp::variant<
-            xt::xtensor<float, 2>, xt::xtensor<double, 2>
-            > Q;
+        xtl::any QR;
     };
 
     /* A solver policy which implements the homotopy method */
-    struct irlq_policy
+    struct irls_policy
     {
-        using report_type = irlq_report;
+        using report_type = irls_report;
         
-        template <typename T> using state_type = irlq_state;
+        template <typename T> using state_type = irls_state;
         
-        kernelpp::maybe<irlq_report> run(
+        kernelpp::maybe<irls_report> run(
             state_type<float>&, const ndspan<float>, float, uint32_t, ndspan<float>);
 
-        kernelpp::maybe<irlq_report> run(
+        kernelpp::maybe<irls_report> run(
             state_type<double>&, const ndspan<double>, double, uint32_t, ndspan<double>);
 
-        irlq_policy();
-        irlq_policy(irlq_policy&&);
+        irls_policy();
+        irls_policy(irls_policy&&);
 
-        ~irlq_policy();
+        ~irls_policy();
     };
 }

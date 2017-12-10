@@ -25,12 +25,12 @@ namespace ss
     using kernelpp::compute_mode;
     using kernelpp::error_code;
 
-    KERNEL_DECL(solve_irlq,
+    KERNEL_DECL(solve_irls,
         compute_mode::CPU)
     {
         template <compute_mode, typename T>
-        static kernelpp::variant<irlq_report, error_code> op(
-            const ndspan<T, 2> Q,
+        static kernelpp::variant<irls_report, error_code> op(
+            const qr_decomposition<T>& QR,
             const ndspan<T> y,
             T tolerance,
             std::uint32_t max_iterations,

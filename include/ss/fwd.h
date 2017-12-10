@@ -22,7 +22,7 @@ namespace ss {
     {
         using std::declval;
 
-        /*  helper type which is well formed  when the solver policy supports
+        /*  helper type which is well formed when the solver policy supports
          *  solutions paramaterized by T
          */
         template <typename P, typename T>

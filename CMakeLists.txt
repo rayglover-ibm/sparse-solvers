@@ -28,6 +28,7 @@ include (BlasUtils)
 list (APPEND src
     "src/lib.cpp"
     "src/solvers/homotopy-cpu.cpp"
+    "src/solvers/irls-cpu.cpp"
     "src/linalg/blas_wrapper.cpp"
     "third_party/dlibxx/src/dlibxx.unix.cxx"
 )
@@ -80,6 +81,7 @@ if (${ss}_WITH_TESTS)
     add_executable ("${ss}_test"
         "src/lib_test.cpp"
         "src/solvers/homotopy_test.cpp"
+        "src/solvers/irls_test.cpp"
         "src/linalg/rank_index_test.cpp"
         "src/linalg/online_inverse_test.cpp"
         "src/linalg/qr_decomposition_test.cpp"
