@@ -76,12 +76,14 @@ namespace
         xtensor<T, 2> noise = xt::random::randn({ N, N }, 10.0f, 5.0f);
         auto spd_noise = ss::blas::xgemm(CblasNoTrans, CblasTrans, T{1}, noise, noise);
 
-        ::test_decomposition(ss::as_span(spd_noise), T(1e-4f));
+        ::test_decomposition(ss::as_span(spd_noise), T(1e-3f));
     }
 }
 
 TEST(cholesky_decomposition, random_inputs)
 {
+    xt::random::seed(0);
+
     test_random<float>(1);
     test_random<float>(2);
     test_random<float>(4);

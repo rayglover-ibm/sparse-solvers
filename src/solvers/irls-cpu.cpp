@@ -20,6 +20,7 @@ limitations under the License.  */
 
 #include <xtensor/xmath.hpp>
 #include <xtensor/xnoalias.hpp>
+#include <xtensor/xio.hpp>
 
 #include <assert.h>
 #include <algorithm>
@@ -70,7 +71,7 @@ namespace ss
         xt::xtensor<T, 1> w = xt::ones<T>({ N });
         xt::xtensor<T, 1> xsorted = xt::ones<T>({ N });
 
-        T eps = T{1};
+        T eps{ 1 };
         std::uint32_t iter{ 0u };
 
         do {
@@ -85,7 +86,7 @@ namespace ss
             eps = std::min(eps, xsorted(1) / T(N));
 
             /* update weights */
-            xt::noalias(w) = T{1} / xt::sqrt(x * x + eps * eps);
+            view(w) = T{1} / xt::sqrt(x * x + eps * eps);
 
             iter++;
         }

@@ -3,12 +3,20 @@
 
 #include <gtest/gtest.h>
 
-#include <xtensor/xtensor.hpp>
-#include <xtensor/xrandom.hpp>
-#include <xtensor/xview.hpp>
-
 TEST(irls, smoke_test)
 {
     ::smoke_test<ss::irls, float>();
     ::smoke_test<ss::irls, double>();
+}
+
+TEST(irls, smoke_test_column_subset)
+{
+    ::smoke_test_column_subset<ss::irls, float>();
+    ::smoke_test_column_subset<ss::irls, double>();
+}
+
+TEST(irls, noisy_signal)
+{
+    ::noisy_signal_test<ss::irls, float>();
+    ::noisy_signal_test<ss::irls, double>();
 }
