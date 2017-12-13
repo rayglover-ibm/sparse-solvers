@@ -20,3 +20,8 @@ TEST(irls, noisy_signal)
     ::noisy_signal_test<ss::irls, float>();
     ::noisy_signal_test<ss::irls, double>();
 }
+
+TEST(irls, noisy_patterns_test)
+{
+    ::noisy_patterns_test<ss::irls, float>(50, 50);
+}
