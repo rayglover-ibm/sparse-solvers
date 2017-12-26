@@ -109,28 +109,29 @@ namespace ss
         for (int64_t k = 0; k < N; k++) {
             /* Compute 2-norm of k-th column without under/overflow. */
             detail::next_householder(_qr, k, hvec, nrm2);
+            if (nrm2 != T{0}) {
+                if (hvec(k) < 0) { nrm2 = -nrm2; }
+
+                /* Form k-th Householder vector. (lower triangular) */
+                xt::view(hvec, xt::range(k, M)) /= nrm2;
+                hvec(k) += T{1};
+
+                /* Apply transformation to remaining columns. */
+                view(s) = T(0);
+                for (m = k; m < M; m++) {
+                    for (n = k + 1; n < N; n++) {
+                        s(n) += hvec(m) * _qr(m, n);
+                    }
+                }
+
+                view(s) /= -hvec(k);
+                for (m = k; m < M; m++) {
+                    for (n = k + 1; n < N; n++) {
+                        _qr(m, n) += hvec(m) * s(n);
+                    }
+                }
+            }
             _rdiag(k) = -nrm2;
-
-            if (nrm2 == T{0}) { continue; }
-
-            /* Form k-th Householder vector. (lower triangular) */
-            xt::view(hvec, xt::range(k, M)) /= nrm2;
-            hvec(k) += T{1};
-
-            /* Apply transformation to remaining columns. */
-            view(s) = T(0);
-            for (m = k; m < M; m++) {
-                for (n = k + 1; n < N; n++) {
-                    s(n) += hvec(m) * _qr(m, n);
-                }
-            }
-
-            view(s) /= -hvec(k);
-            for (m = k; m < M; m++) {
-                for (n = k + 1; n < N; n++) {
-                    _qr(m, n) += hvec(m) * s(n);
-                }
-            }
         }
         detail::next_householder(_qr, N, hvec, nrm2);
     }
@@ -220,7 +221,6 @@ namespace ss
                 s(m) -= s(n) * _qr(m, n);
             }
         }
-
         /* x becomes s[0..N] */
         view(x) = xt::view(s, xt::range(0, N));
     }
