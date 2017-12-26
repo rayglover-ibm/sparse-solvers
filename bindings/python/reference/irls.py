@@ -3,17 +3,18 @@
 import numpy as np
 import numpy.linalg as lin
 import scipy.linalg as scilin
+import scipy.stats as stats
 
-np.set_printoptions(precision=6, suppress=True)
+np.set_printoptions(suppress=True)
+
+def normZeroOne(x):
+    return (np.min(x) - x) / -np.ptp(x)
 
 def irls_newton(Q, R, b, w):
     C, upper = scilin.cho_factor(np.dot(Q.T, Q * w))
     s = scilin.cho_solve((C, upper), np.dot(Q.T, b))
     t = np.dot(Q, s)
-
     x = lin.solve(R, np.dot(Q.T, t))
-    x /= lin.norm(x, ord=1)
-
     return x
 
 def irls(A, b, n_iter, K, tol):
@@ -33,15 +34,19 @@ def irls(A, b, n_iter, K, tol):
     (M, N) = A.shape
     Q, R = lin.qr(A, mode='complete')
 
-    # set up system
-    epsi = 1.0      # initialise epsilon
-    w = np.ones(N)  # initialise weights vector
+    # initialise epsilon and weights
+    w = np.ones(A.shape[1], dtype=A.dtype)
+    epsi = 1.0
+    p = 0.9
 
     # run iterative procedure
     for _ in range(0, n_iter):
         # update x
         x = irls_newton(Q, R, b, w)
-        print ("x={}".format(x))
+        x = stats.threshold(x, threshmin=tol, newval=0)
+
+        print ("w={}".format(w))
+        print ("x={}\n".format(x))
 
         # sort r to get r-vector
         xsorted = np.sort(np.abs(x), kind='mergesort')[::-1] # sort in descending order
@@ -52,23 +57,33 @@ def irls(A, b, n_iter, K, tol):
 
         # update epsilon if required
         epsi = min(epsi, xsorted[K + 1] / float(N))
-        print ("epsi={}".format(epsi))
 
-        # update weights
-        w = 1.0 / np.sqrt(x * x + epsi * epsi)
-        print ("w={}\n".format(w))
+        # update weights and normalize
+        wnew = np.power(x * x + epsi, (p / 2) - 1)
+        wnew /= np.sum(wnew)
+
+        # stop if the weights aren't changing
+        if abs(np.max(w - wnew)) < np.finfo(np.float32).eps:
+            break
+
+        w = wnew
 
     # return final solution
-    return x
+    return x / np.sum(x)
 
-
-b = np.asarray([.0, .5, .45, .05])
+b = np.asarray(
+    [0.27,  0.12,  0.25,  0.02,  0.27],
+    dtype=np.float32
+)
 A = np.array([
-    [.1, .2, .0, .2],
-    [.4, .4, .8, .4],
-    [.5, .3, .1, .4],
-    [.0, .1, .1, .0]
-])
+    [0.25,  0.25,  0.29,  0.15,  0.14],
+    [0.20,  0.15,  0.02,  0.16,  0.27],
+    [0.15,  0.16,  0.29,  0.07,  0.09],
+    [0.12,  0.25,  0.07,  0.25,  0.28],
+    [0.20,  0.17,  0.29,  0.25,  0.14]
+], dtype=np.float32)
 
-x = irls(A, b, 20, 1, 0.01)
-print("Ax=\n{0}\n".format(A.dot(x)))
+x = irls(A, b, 10, 0, 0.01)
+
+print("x={0}".format(x))
+print("Ax={0}".format(A.dot(x)))
