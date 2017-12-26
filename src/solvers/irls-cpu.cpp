@@ -19,6 +19,7 @@ limitations under the License.  */
 #include "linalg/cholesky_decomposition.h"
 
 #include <xtensor/xmath.hpp>
+#include <xtensor/xsort.hpp>
 #include <xtensor/xnoalias.hpp>
 #include <xtensor/xio.hpp>
 
@@ -28,8 +29,18 @@ limitations under the License.  */
 namespace ss
 {
     template <typename T>
-    void irls_newton(
-        const qr_decomposition<T>& QR,
+    void threshold(ndspan<T, 1> x, T threshmin, T newval)
+    {
+        for (T& val : x) {
+            if (val < threshmin) {
+                val = newval;
+            }
+        }
+    }
+
+    template <typename T>
+    bool irls_newton(
+        const ndspan<T, 2> R,
         const ndspan<T, 2> Q,
         const ndspan<T> y,
         const ndspan<T> w,
@@ -39,6 +50,8 @@ namespace ss
         xt::xtensor<T, 2> qTqw = blas::xgemm(CblasTrans, CblasNoTrans, T{1}, Q, qw);
 
         ss::cholesky_decomposition<T> chol(as_span(qTqw));
+        if (!chol.isspd()) { return false; }
+
         auto qTb = blas::xgemv(CblasTrans, T{1}, Q, y);
 
         auto s = xt::xtensor<T, 1>::from_shape(y.shape());
@@ -47,8 +60,10 @@ namespace ss
         auto t = blas::xgemv(CblasNoTrans, T{1}, Q, s);
         auto qTt = blas::xgemv(CblasTrans, T{1}, Q, t);
 
-        QR.solve(qTt, x);
-        ss::view(x) /= xt::sum(x);
+        blas::xtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, R, ss::as_span(qTt));
+        ss::view(x) = qTt;
+
+        return true;
     }
 
     template <typename T>
@@ -60,39 +75,52 @@ namespace ss
         ndspan<T> x)
     {
         auto Q = QR.q();
+        auto R = QR.r();
 
         assert(max_iter > 0
-            && dim<0>(Q) == dim<1>(Q)
             && y.size() == dim<0>(Q)
-            && x.size() == dim<0>(Q));
+            && x.size() == dim<1>(Q));
 
         size_t N = dim<0>(x);
 
-        xt::xtensor<T, 1> w = xt::ones<T>({ N });
-        xt::xtensor<T, 1> xsorted = xt::ones<T>({ N });
+        /* initialize the result */
+        view(x) = T{0};
 
-        T eps{ 1 };
-        std::uint32_t iter{ 0u };
+        xt::xtensor<T, 1> w = xt::ones<T>({ N });
+        xt::xtensor<T, 1> xnext = xt::ones<T>({ N });
+
+        T eps{1};
+        std::uint32_t iter{0u};
+        const T p{0.9};
 
         do {
             /* update x */
-            irls_newton(QR, as_span(Q), y, as_span(w), x);
+            if (!irls_newton(as_span(R), as_span(Q), y, as_span(w), as_span(xnext))) {
+                printf("##### spd\n");
+                return { iter, eps, true };
+            }
+
+            threshold(as_span(xnext), tolerance, T{0});
+            view(x) = xnext;
 
             /* find the second largest abs value of x */
-            view(xsorted) = xt::abs(x);
-            std::nth_element(xsorted.begin(), xsorted.begin() + 1, xsorted.end(), std::greater<T>());
+            std::nth_element(xnext.begin(), xnext.begin() + 1, xnext.end(), std::greater<T>());
 
             /* update eps */
-            eps = std::min(eps, xsorted(1) / T(N));
+            eps = std::min(eps, xnext(1) / T(N));
 
-            /* update weights */
-            view(w) = T{1} / xt::sqrt(x * x + eps * eps);
+            /* update weights and normalize */
+            view(w) = xt::pow(x * x + eps, (p / 2.0) - 1.0);
+            view(w) /= xt::sum(w);
 
             iter++;
         }
-        while (iter < max_iter && xsorted(1) > tolerance);
+        while (iter < max_iter && xnext(1) > tolerance);
 
-        return { iter, eps };
+        /* finally, normalize x */
+        view(x) /= xt::sum(x);
+
+        return { iter, eps, false };
     }
 
     template <> kernelpp::variant<irls_report, error_code>

@@ -62,6 +62,12 @@ namespace ss
 
         /* the solution error */
         double solution_error;
+
+        /* whether the IRLS failed because an iteration was evaluating
+         * a matrix which is not symmetric positive definite, i.e. it doesn't
+         * have a full cholesky decomposition.
+         */
+        bool spd_failure;
     };
 
     /* make std::variant happy */
@@ -78,7 +84,7 @@ namespace ss
         xtl::any QR;
     };
 
-    /* A solver policy which implements the homotopy method */
+    /* A solver policy which implements the iteratively reweighted least squares method */
     struct irls_policy
     {
         using report_type = irls_report;
