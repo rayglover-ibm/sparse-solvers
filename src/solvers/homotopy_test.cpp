@@ -14,11 +14,11 @@ using ss::as_span;
 
 namespace
 {
-    void check_report(kernelpp::maybe<ss::homotopy_report>& result,
-        float tolerance, uint32_t max_iterations
-        )
+    template <> void check_report<ss::homotopy_report>(
+        kernelpp::maybe<ss::homotopy_report>& result,
+        float tolerance, uint32_t max_iterations)
     {
-        EXPECT_TRUE(result.is<ss::homotopy_report>());
+        ASSERT_TRUE(result.is<ss::homotopy_report>());
         auto r = result.get<ss::homotopy_report>();
 
         EXPECT_GE(r.iter, 1);
@@ -50,6 +50,6 @@ TEST(homotopy, noisy_signal)
 
 TEST(homotopy, noisy_patterns_test)
 {
-    ::noisy_patterns_test<ss::homotopy, float>(100, 25);
-    ::noisy_patterns_test<ss::homotopy, float>(25, 100);
+    ::noisy_patterns_test<ss::homotopy, float>(100, 25, .1f, 1.0f, 25);
+    ::noisy_patterns_test<ss::homotopy, float>(25, 100, .1f, 1.0f, 100);
 }

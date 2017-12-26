@@ -5,6 +5,7 @@
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xrandom.hpp>
 #include <xtensor/xview.hpp>
+#include <xtensor/xsort.hpp>
 #include <xtensor/xindex_view.hpp>
 
 using xt::xtensor;
@@ -14,22 +15,12 @@ namespace
 {
     template <size_t D, typename M>
     size_t dim(const M& mat) { return mat.shape()[D]; }
-    
+
     template <typename Report>
-    void check_report(kernelpp::maybe<Report>& result,
-        float tolerance, uint32_t max_iterations
-        )
-    {
-        EXPECT_TRUE(result.template is<Report>());
-        auto r = result.template get<Report>();
-
-        EXPECT_GE(r.iter, 1);
-        EXPECT_LE(r.iter, max_iterations);
-
-        if (r.iter < max_iterations) {
-            EXPECT_LE(r.solution_error, tolerance);
-        }
-    }
+    void check_report(
+        kernelpp::maybe<Report>& result,
+        float tolerance,
+        uint32_t max_iterations);
 
     template <template <typename> class Solver, typename T>
     void smoke_test()
@@ -132,62 +123,70 @@ namespace
         }
     }
 
-    /* TODO(rayg) replace with xt::norm_l1 */
     template <typename T>
-    void l1(ss::ndspan<T, 1> x) {
-        xt::view(x, xt::all()) /= xt::sum(xt::abs(x));
+    void l1(ss::ndspan<T, 1> x)
+    {
+        T norm = xt::sum(xt::abs(x))();
+        ASSERT_GT(norm, 0.0);
+        xt::view(x, xt::all()) /= norm;
     }
 
     template <template <typename> class Solver, typename T>
-    void noisy_patterns_test(uint32_t M, uint32_t N)
+    void noisy_patterns_test(
+        uint32_t M,
+        uint32_t N,
+        T noise_level,
+        T signal_level,
+        int iterations)
     {
-        const int PATTERN = 3;
-        const float NOISE = 0.01f;
+        const int PATTERN = 2;
+        const T   ERROR = 0.1 * noise_level;
 
         xt::random::seed(0);
 
         /* make some noise */
-        xtensor<float, 2> noise = xt::random::randn({ M, N }, .5f, .1f);
+        xtensor<T, 2> noise = xt::random::randn({ M, N }, .5f, noise_level);
 
         /* construct a noisy signal with a pattern */
-        xtensor<float, 1> signal = xt::random::randn({ M }, .5f, .1f);
-        xt::view(signal, xt::range(0, int(M), PATTERN /* step */)) += 1.0f;
+        xtensor<T, 1> signal = xt::random::randn({ M }, .5f, noise_level);
+        xt::view(signal, xt::range(0, int(M), PATTERN /* step */)) += signal_level;
 
-        ss::ndspan<float, 1> s = as_span(signal);
+        ss::ndspan<T, 1> s = as_span(signal);
         ::l1(s);
 
         int failures = 0;
         for (uint32_t n = 0; n < N; n++)
         {
-            xt::xtensor<float, 2> haystack = noise;
+            xt::xtensor<T, 2> haystack = noise;
 
             /* insert a representation of the signal to search for in the current column */
             auto needle = xt::view(haystack, xt::range(0, int(M), PATTERN /* step */), n);
-            needle += 1.0f;
+            needle = signal_level;
 
             /* normalize the columns such that the sum of each column equals 1 */
             ss::norm_l1(as_span(haystack));
 
             /* solve */
-            xtensor<float, 1> x = xt::zeros<float>({ N });
+            xtensor<T, 1> x = xt::zeros<T>({ N });
             {
-                auto result = ss::homotopy<float>(as_span(haystack))
-                    .solve(as_span(s), NOISE, N, as_span(x));
+                auto result = Solver<T>(as_span(haystack))
+                    .solve(s, ERROR, iterations, as_span(x));
 
-                ::check_report(result, NOISE, N);
+                ::check_report(result, ERROR, iterations);
             }
-
+            
             /* argmax(x) == n */
-            EXPECT_EQ(xt::amax(x)(), x[n]);
-            /* 95% sparsity */
-            EXPECT_LE(xt::nonzero(x).size(), int(N * 0.05));
+            EXPECT_EQ(xt::argmax(x)(), n);
+
+            /* expect a single element above the ERROR level */
+            EXPECT_EQ(xt::filter(x, x > ERROR).size(), 1);
 
             {
                 /* reconstruct the signal given the sparse representation */
-                xtensor<float, 1> y = xt::zeros<float>({ M });
+                xtensor<T, 1> y = xt::zeros<T>({ M });
                 ss::reconstruct_signal(as_span(haystack), as_span(x), as_span(y));
 
-                if (!xt::allclose(y, s, 0.0 /* relative */, 5 * NOISE /* absolute */)) {
+                if (!xt::allclose(y, s, 0.0 /* relative */, 5 * ERROR /* absolute */)) {
                     std::cout << "Reconstruction of signal " << n << " failed.\n";
                     failures++;
                 }

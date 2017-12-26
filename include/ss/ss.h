@@ -27,8 +27,9 @@ namespace ss
     template <typename T, typename SolverPolicy>
     struct solver : private SolverPolicy
     {   
-        using solve_result = kernelpp::maybe<typename SolverPolicy::report_type>;
-        using state_type = typename SolverPolicy::template state_type<T>;
+        using report_type  = typename SolverPolicy::report_type;
+        using state_type   = typename SolverPolicy::template state_type<T>;
+        using solve_result = kernelpp::maybe<report_type>;
 
         /* A : non-owning view of a sensing matrix */
         solver(const ndspan<T, 2> A);
@@ -44,7 +45,7 @@ namespace ss
          *                 x : the output sparse representation vector
          *                     of length n
          *
-         *    returns : an instance of SolverPolicy::report_type, or an error
+         *    returns : an instance of report_type, or an error
          */
         solve_result solve(
             const ndspan<T> y, T tol, std::uint32_t max_iterations, ndspan<T> x);
