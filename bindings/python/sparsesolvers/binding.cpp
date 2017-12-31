@@ -81,7 +81,7 @@ namespace builders
     {
         cls.def(py::init([](py::array_t<T> A_) {
             auto A = as_span<2>(A_);
-            return new py_solver<P>{ A.shape(), solver<T, homotopy_policy>(A) };
+            return new py_solver<P>{ A.shape(), solver<T, P>(A) };
         }));
     }
     
@@ -94,13 +94,14 @@ namespace builders
                T tol = std::numeric_limits<T>::epsilon() * 10,
                uint32_t maxiter = 100)
             {
+                using report_type = typename P::report_type;
                 py::array_t<T> x(instance.m_shape[1]);
 
                 auto& s = instance.m.template get<solver<T, P>>();
                 auto result = s.solve(as_span<1>(b), tol, maxiter, as_span<1>(x));
 
                 util::try_throw(result);
-                return std::make_tuple(x, result.template get<homotopy_report>());
+                return std::make_tuple(x, result.template get<report_type>());
             },
 
             "Execute the solver on the given inputs.",
@@ -122,12 +123,27 @@ PYBIND11_PLUGIN(binding)
         .def_readwrite("solution_error", &ss::homotopy_report::solution_error);
 
     /* homotopy solver */
-    auto homotopy = py::class_< builders::py_solver<ss::homotopy_policy>>(m, "Homotopy");
+    auto homotopy = py::class_<builders::py_solver<ss::homotopy_policy>>(m, "Homotopy");
 
     builders::init<float>(homotopy);
     builders::init<double>(homotopy);
     builders::solve<float>(homotopy);
     builders::solve<double>(homotopy);
+
+    /* irls report */
+    py::class_<ss::irls_report>(m, "IrlsReport")
+        .def(py::init())
+        .def_readwrite("iter", &ss::irls_report::iter)
+        .def_readwrite("spd_failure", &ss::irls_report::spd_failure)
+        .def_readwrite("solution_error", &ss::irls_report::solution_error);
+
+    /* irls solver */
+    auto irls = py::class_<builders::py_solver<ss::irls_policy>>(m, "Irls");
+
+    builders::init<float>(irls);
+    builders::init<double>(irls);
+    builders::solve<float>(irls);
+    builders::solve<double>(irls);
 
     return m.ptr();
 }

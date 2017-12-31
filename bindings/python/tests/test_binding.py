@@ -6,28 +6,27 @@ import unittest
 import sparsesolvers as ss
 import numpy as np
 
+def _test_smoke(S, N, T):
+    A = np.identity(N, dtype=T)
+    solver = S(A)
+
+    for n in range(0, N-1):
+        signal = np.zeros(N, dtype=T)
+        signal[n] = 1
+
+        x, info = solver.solve(signal)
+        assert np.array_equal(signal, x)
+        assert info.solution_error == 0
+        assert info.iter == 1
+
 class HomotopySolverTest(unittest.TestCase):
-    def _test_smoke(self, N, T):
-        A = np.identity(N, dtype=T)
-        solver = ss.Homotopy(A)
-
-        for n in range(0, N-1):
-            signal = np.zeros(N, dtype=T)
-            signal[n] = 1
-
-            x, info = solver.solve(signal)
-            assert np.array_equal(signal, x)
-            assert info.solution_error == 0
-            assert info.iter == 1
-
     def test_smoke_f32(self):
         '''smoke test (float32)'''
-        self._test_smoke(5, np.float32)
+        _test_smoke(ss.Homotopy, 5, np.float32)
 
     def test_smoke_f64(self):
         '''smoke test (float64)'''
-        self._test_smoke(5, np.float64)
-
+        _test_smoke(ss.Homotopy, 5, np.float64)
 
     def test_row_subset(self):
         '''test a subset of rows'''
@@ -68,6 +67,14 @@ class HomotopySolverTest(unittest.TestCase):
         assert len(x) == 5
         assert np.argmax(x) == 3
 
+class IrlsSolverTest(unittest.TestCase):
+    def test_smoke_f32(self):
+        '''smoke test (float32)'''
+        _test_smoke(ss.Irls, 5, np.float32)
+
+    def test_smoke_f64(self):
+        '''smoke test (float64)'''
+        _test_smoke(ss.Irls, 5, np.float64)
 
 if __name__ == '__main__':
     print("[sparsesolvers] version={}".format(ss.version()))
