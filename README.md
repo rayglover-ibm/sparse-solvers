@@ -1,5 +1,5 @@
 # Sparse Solvers &nbsp; [![Build Status](https://travis-ci.org/rayglover-ibm/sparse-solvers.svg?branch=master)](https://travis-ci.org/rayglover-ibm/sparse-solvers)
-_High performance ℓ₁-minimization solvers for sparse sensing and signal recovery problems. (work in progress.)_
+_High performance ℓ₁-minimization solvers for sparse sensing and signal recovery problems._
 
 ## Releases
 
@@ -41,7 +41,9 @@ print("error=%f, sparsity=%f, argmax=%i" % (
 
 3. _D. O’Leary_ – __Robust Regression Computation Using Iteratively Reweighted Least Squares__ – Society for Industrial and Applied Mathematics, 1990
 
-## Setup, Build & test
+<br>
+
+## Setup, Build & Test
 
 Sparse solvers is also a c++14 library for your own projects. The python binding is a good example of how you can incorporate the solvers in to your own c++ projects with minimal effort.
 
