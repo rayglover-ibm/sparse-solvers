@@ -1,60 +1,45 @@
-import os
-import argparse
+# Copyright 2017 International Business Machines Corporation
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
-import homotopy as ht
-import homotopy_simple as shomt
+import homotopy
 import irls
-import read_matrix_signal as read
-import sparse_results as res
-import suffixes as suffs
 
-parser = argparse.ArgumentParser(description='Apply different sparse representation solvers.')
+A = np.array([
+    [0.25,  0.25,  0.29,  0.15,  0.14],
+    [0.20,  0.15,  0.02,  0.16,  0.27],
+    [0.15,  0.16,  0.29,  0.07,  0.09],
+    [0.12,  0.25,  0.07,  0.25,  0.28],
+    [0.20,  0.17,  0.29,  0.25,  0.14]],
+    dtype=np.float32
+)
 
-parser.add_argument(dest='filePrefix',
-    help='input file prefix for input files containing matrix A (FILE_PREFIX_mat.dat) ' +
-         'and signal (FILE_PREFIX_signal.dat)')
+b = np.asarray(
+    [0.27,  0.12,  0.25,  0.02,  0.27],
+    dtype=np.float32
+)
 
-parser.add_argument('--sparse', dest='sparse',
-    help='perform sparse decomposition using homotopy (--sparse h) or iterative ' +
-         'reweighted least squares (--sparse i)' )
-
-parser.add_argument('--algochoice', dest='choice',
-    help='choice of algorithm (only used for homotopy); 1 for library solver, ' +
-         '2 for continuous inverse updates')
-
-args = parser.parse_args()
-
-#read in matrix and signal
-(A, b) = read.read_file(args.filePrefix)
-
-#run sparse solver of choice
-if args.sparse is not None:
-    if os.path.isfile(args.filePrefix + suffs.fileMat + suffs.fileEnding) and os.path.isfile(
-            args.filePrefix + suffs.fileSignal + suffs.fileEnding):
-        if args.sparse == 'h':
-            if args.choice == '2':
-                x_sol = ht.homotopy(A, b, 10000, 1e-6, False)
-                res.print_results(args.filePrefix, A, b, x_sol)
-            else:
-                x_sol = ht.homotopy(A, b, 10000, 1e-6, True)
-                res.print_results(args.filePrefix, A, b, x_sol)
-
-        elif args.sparse == 'hs':
-            x_sol = shomt.simple_homotopy(A, b, 1000, 0.8, 0.2)
-            res.print_results(args.filePrefix, A, b, x_sol)
-
-        elif args.sparse == 'i':
-            x_sol = irls.irls(A, b, 100, 3, 1e-7)
-            res.print_results(args.filePrefix, A, b, x_sol)
-
-        else:
-            print('Error: Invalid sparse decomposition setting. '  +
-                  'Please use homotopy (--sparse h) or iterative ' +
-                  'reweighted least squares (--sparse i).\n')
-    else:
-        print('Error: The sparse representation could not be evaluated' +
-              'because the file/s' + args.filePrefix + suffs.fileMat + suffs.fileEnding +
-              'and/or' + args.filePrefix + suffs.fileSignal + suffs.fileEnding + 'do/does not exist.')
+tolerance = 0.05
 
 
+print("--\n-- Reference implementations\n--\n")
+print("-- Homotopy\n")
 
+x = homotopy.solve(A, b, 5, tolerance)
+print("x={}\nargmax(x)={}".format(x, np.argmax(x)))
+
+print("\n-- IRLS\n")
+
+x = irls.solve(A, b, 5, tolerance)
+print("x={}\nargmax(x)={}".format(x, np.argmax(x)))

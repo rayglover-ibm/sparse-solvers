@@ -1,5 +1,17 @@
-# iterative reweighted least squares algorithm for sparse signal recovery
-# (self-contained example)
+# Copyright 2017 International Business Machines Corporation
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 import numpy as np
 import numpy.linalg as lin
@@ -23,7 +35,7 @@ def irls_newton(Q, R, b, w):
     x = scilin.solve_triangular(R, np.dot(Q.T, t), lower=False)
     return x
 
-def irls(A, b, n_iter, K, tol):
+def solve(A, b, n_iter, tol, K=0):
     """
     Function:  irls
     --------------------
@@ -75,22 +87,3 @@ def irls(A, b, n_iter, K, tol):
 
     # return final solution
     return x / np.sum(x)
-
-
-A = np.array([
-    [0.25,  0.25,  0.29,  0.15,  0.14],
-    [0.20,  0.15,  0.02,  0.16,  0.27],
-    [0.15,  0.16,  0.29,  0.07,  0.09],
-    [0.12,  0.25,  0.07,  0.25,  0.28],
-    [0.20,  0.17,  0.29,  0.25,  0.14]
-], dtype=np.float32)
-
-b = np.asarray(
-    [0.27,  0.12,  0.25,  0.02,  0.27],
-    dtype=np.float32
-)
-
-x = irls(A, b, 5, 0, 0.1)
-
-print("x={0}".format(x)) # solution
-print("argmax(x)={0}".format(np.argmax(x))) # should equal 2
