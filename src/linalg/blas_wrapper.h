@@ -355,15 +355,15 @@ namespace blas
     }
 
     template <typename T> void xtrsm(
-        const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+        const enum CBLAS_UPLO uplo,
         const enum CBLAS_TRANSPOSE trans, const enum CBLAS_DIAG diag,
         const T alpha, const ndspan<T, 2> A, ndspan<T, 1> b)
     {
         using namespace detail;
 
-        xtrsm(order(A), side, uplo, trans, diag,
+        xtrsm(order(A), CblasLeft, uplo, trans, diag,
             dim<0>(b), 1, alpha, data(A), leading_stride(A),
-            data(b), 1);
+            data(b), leading_stride(b));
     }
 
 
@@ -396,7 +396,7 @@ namespace blas
 
         xtrsv(order(A), uplo, trans, diag,
             dim<1>(A), data(A), leading_stride(A),
-            data(b), 1);
+            data(b), leading_stride(b));
     }
 }
 }
