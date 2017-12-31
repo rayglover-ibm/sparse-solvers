@@ -37,7 +37,9 @@ print("error=%f, sparsity=%f, argmax=%i" % (
 
 1. _A. Y. Yang, Z. Zhou, A. Ganesh, S. S. Sastry, and Y. Ma_ – __Fast ℓ₁-minimization Algorithms For Robust Face Recognition__ – IEEE Trans. Image Processing, vol. 22, pp. 3234–3246, Aug 2013.
 
-2. _R. Chartrand, W. Yin_ – __Iteratively Reweighted Algorithms For Compressive Sensing__ – Acoustics Speech and Signal Processing 2008. ICASSP 2008. IEEE International Conference, pp. 3869-3872, March 2008. 
+2. _R. Chartrand, W. Yin_ – __Iteratively Reweighted Algorithms For Compressive Sensing__ – Acoustics Speech and Signal Processing 2008. ICASSP 2008. IEEE International Conference, pp. 3869-3872, March 2008.
+
+3. _D. O’Leary_ – __Robust Regression Computation Using Iteratively Reweighted Least Squares__ – Society for Industrial and Applied Mathematics, 1990
 
 ## Setup, Build & test
 
