@@ -1,20 +1,26 @@
-#iterative reweighted least squares algorithm for sparse decomposition
+# iterative reweighted least squares algorithm for sparse signal recovery
+# (self-contained example)
 
 import numpy as np
 import numpy.linalg as lin
 import scipy.linalg as scilin
 import scipy.stats as stats
 
-np.set_printoptions(suppress=True)
+np.set_printoptions(suppress=True, linewidth=400)
 
-def normZeroOne(x):
-    return (np.min(x) - x) / -np.ptp(x)
+def threshold(a, threshmin=None, newval=0):
+    a = np.asarray(a).copy()
+    mask = np.zeros(a.shape, dtype=bool)
+    if threshmin is not None:
+        mask |= (a < threshmin)
+    a[mask] = newval
+    return a
 
 def irls_newton(Q, R, b, w):
-    C, upper = scilin.cho_factor(np.dot(Q.T, Q * w))
-    s = scilin.cho_solve((C, upper), np.dot(Q.T, b))
+    C = scilin.cholesky(np.dot(Q.T, Q * w), lower=False)
+    s = scilin.cho_solve((C, False), np.dot(Q.T, b))
     t = np.dot(Q, s)
-    x = lin.solve(R, np.dot(Q.T, t))
+    x = scilin.solve_triangular(R, np.dot(Q.T, t), lower=False)
     return x
 
 def irls(A, b, n_iter, K, tol):
@@ -32,7 +38,7 @@ def irls(A, b, n_iter, K, tol):
     returns: the sparse representation vector x
     """
     (M, N) = A.shape
-    Q, R = lin.qr(A, mode='complete')
+    Q, R = lin.qr(A, mode='full')
 
     # initialise epsilon and weights
     w = np.ones(A.shape[1], dtype=A.dtype)
@@ -40,19 +46,18 @@ def irls(A, b, n_iter, K, tol):
     p = 0.9
 
     # run iterative procedure
-    for _ in range(0, n_iter):
+    for i in range(0, n_iter):
         # update x
         x = irls_newton(Q, R, b, w)
-        x = stats.threshold(x, threshmin=tol, newval=0)
+        reltol = np.max(x) * tol
+        x = threshold(x, threshmin=reltol, newval=0)
 
-        print ("w={}".format(w))
-        print ("x={}\n".format(x))
+        print ("iteration {}\n  w={}\n  x={}\n".format(i, w, x))
 
         # sort r to get r-vector
         xsorted = np.sort(np.abs(x), kind='mergesort')[::-1] # sort in descending order
-
         # check if sparsity achieved yet
-        if np.abs(xsorted[K + 1]) < tol:
+        if np.abs(xsorted[K + 1]) <= reltol:
             break
 
         # update epsilon if required
@@ -71,10 +76,7 @@ def irls(A, b, n_iter, K, tol):
     # return final solution
     return x / np.sum(x)
 
-b = np.asarray(
-    [0.27,  0.12,  0.25,  0.02,  0.27],
-    dtype=np.float32
-)
+
 A = np.array([
     [0.25,  0.25,  0.29,  0.15,  0.14],
     [0.20,  0.15,  0.02,  0.16,  0.27],
@@ -83,7 +85,12 @@ A = np.array([
     [0.20,  0.17,  0.29,  0.25,  0.14]
 ], dtype=np.float32)
 
-x = irls(A, b, 10, 0, 0.01)
+b = np.asarray(
+    [0.27,  0.12,  0.25,  0.02,  0.27],
+    dtype=np.float32
+)
 
-print("x={0}".format(x))
-print("Ax={0}".format(A.dot(x)))
+x = irls(A, b, 5, 0, 0.1)
+
+print("x={0}".format(x)) # solution
+print("argmax(x)={0}".format(np.argmax(x))) # should equal 2
