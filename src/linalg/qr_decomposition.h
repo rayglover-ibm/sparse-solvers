@@ -81,7 +81,7 @@ namespace ss{ namespace detail
                 nrm2 = std::hypot(nrm2, hm);
             }
         } else {
-            /* restore the current householder (k-1) to A */
+            /* restore the current householder (n-1) to A */
             for (int64_t m = n-1; m < M; m++)
                 A(m, n-1) = hvec(m);
         }

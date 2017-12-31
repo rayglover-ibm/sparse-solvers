@@ -3,15 +3,6 @@
 
 #include <gtest/gtest.h>
 
-#include <xtensor/xtensor.hpp>
-#include <xtensor/xrandom.hpp>
-#include <xtensor/xview.hpp>
-#include <xtensor/xio.hpp>
-#include <xtensor/xeval.hpp>
-
-using xt::xtensor;
-using ss::as_span;
-
 namespace
 {
     template <> void check_report<ss::homotopy_report>(
@@ -50,6 +41,11 @@ TEST(homotopy, noisy_signal)
 
 TEST(homotopy, noisy_patterns_test)
 {
-    ::noisy_patterns_test<ss::homotopy, float>(100, 25, .1f, 1.0f, 25);
-    ::noisy_patterns_test<ss::homotopy, float>(25, 100, .1f, 1.0f, 100);
+    ::noisy_patterns_test<ss::homotopy, float>(100, 25, .1f, 1.0f);
+    ::noisy_patterns_test<ss::homotopy, float>(25, 100, .1f, 1.0f);
+}
+
+TEST(homotopy, permutations)
+{
+    ::permutations_test<ss::homotopy, float>(10, 10, 0.25f, 10);
 }

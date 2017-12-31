@@ -1,10 +1,12 @@
 #include <ss/ss.h>
 
 #include <gtest/gtest.h>
+#include <algorithm>
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xrandom.hpp>
 #include <xtensor/xview.hpp>
+#include <xtensor/xio.hpp>
 #include <xtensor/xsort.hpp>
 #include <xtensor/xindex_view.hpp>
 
@@ -136,8 +138,7 @@ namespace
         uint32_t M,
         uint32_t N,
         T noise_level,
-        T signal_level,
-        int iterations)
+        T signal_level)
     {
         const int PATTERN = 2;
         const T   ERROR = 0.1 * noise_level;
@@ -170,9 +171,9 @@ namespace
             xtensor<T, 1> x = xt::zeros<T>({ N });
             {
                 auto result = Solver<T>(as_span(haystack))
-                    .solve(s, ERROR, iterations, as_span(x));
+                    .solve(s, ERROR, N, as_span(x));
 
-                ::check_report(result, ERROR, iterations);
+                ::check_report(result, ERROR, N);
             }
             
             /* argmax(x) == n */
@@ -187,11 +188,60 @@ namespace
                 ss::reconstruct_signal(as_span(haystack), as_span(x), as_span(y));
 
                 if (!xt::allclose(y, s, 0.0 /* relative */, 5 * ERROR /* absolute */)) {
-                    std::cout << "Reconstruction of signal " << n << " failed.\n";
-                    failures++;
+                    ADD_FAILURE() << "Reconstruction of signal " << n << " failed:"
+                        << "\n  y=" << y
+                        << "\n  s=" << s
+                        << '\n';
                 }
             }
         }
-        EXPECT_EQ(failures, 0);
+    }
+
+    template <typename T>
+    void permute(std::vector<T>& v, int n) {
+        while (n > 0) { std::next_permutation(v.begin(), v.end()); n--; }
+    }
+
+    template <template <typename> class Solver, typename T>
+    void permutations_test(
+        uint32_t M,
+        uint32_t N,
+        T noise_level,
+        int P)
+    {
+        const T ERROR = noise_level;
+
+        std::vector<T> data(M, T{0});
+        std::iota(data.begin(), data.end(), 1);
+
+        /* given m numbers, produce n permutations, one
+           in each column of the sensing matrix */
+        std::vector<T> col = data;
+        xtensor<T, 2> noise = xt::zeros<T>({ M, N });
+        
+        for (int n{0}; n < N; n++)
+        {
+            xt::view(noise, xt::all(), n) = as_span(col);
+            ::permute(col, P);
+        }
+
+        /* find each column */
+        Solver<T> solver(as_span(noise));
+        xtensor<T, 1> x = xt::zeros<T>({ N });
+        
+        for (int n{0}; n < N; n++)
+        {
+            auto result = solver.solve(as_span(data), ERROR, N, as_span(x));
+            ::check_report(result, ERROR, N);
+
+            /* argmax(x) == n */
+            if (xt::argmax(x)() != n) {
+                ADD_FAILURE() << "Solution for signal " << n << " failed:"
+                    << "\n  x =" << x
+                    << '\n';                
+            }
+
+            ::permute(data, P);
+        }
     }
 }
