@@ -40,7 +40,7 @@ TEST(irls, noisy_signal)
     ::noisy_signal_test<ss::irls, double>();
 }
 
-TEST(irls, noisy_patterns_test)
+TEST(irls, permutations)
 {
-    ::noisy_patterns_test<ss::irls, float>(5, 5, 0.2f, 1.0f, 10); /* M == N */
+    ::permutations_test<ss::irls, float>(5, 5, 0.25f, 6); /* M == N */
 }

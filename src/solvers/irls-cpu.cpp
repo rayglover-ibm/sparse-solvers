@@ -20,22 +20,25 @@ limitations under the License.  */
 
 #include <xtensor/xmath.hpp>
 #include <xtensor/xsort.hpp>
-#include <xtensor/xnoalias.hpp>
-#include <xtensor/xio.hpp>
 
 #include <assert.h>
 #include <algorithm>
 
 namespace ss
 {
-    template <typename T>
-    void threshold(ndspan<T, 1> x, T threshmin, T newval)
+    template <typename T, typename E>
+    void threshold(E& x, T threshmin, T newval)
     {
         for (T& val : x) {
             if (val < threshmin) {
                 val = newval;
             }
         }
+    }
+
+    template <typename E>
+    auto max(const E& e) {
+        return *std::max_element(e.cbegin(), e.cend());
     }
 
     template <typename T>
@@ -53,14 +56,15 @@ namespace ss
         if (!chol.isspd()) { return false; }
 
         auto qTb = blas::xgemv(CblasTrans, T{1}, Q, y);
-
         auto s = xt::xtensor<T, 1>::from_shape(y.shape());
         chol.solve(qTb, s);
 
         auto t = blas::xgemv(CblasNoTrans, T{1}, Q, s);
         auto qTt = blas::xgemv(CblasTrans, T{1}, Q, t);
 
-        blas::xtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, R, ss::as_span(qTt));
+        blas::xtrsm(CblasUpper, CblasNoTrans, CblasNonUnit, T{1},
+            R, ss::as_span(qTt));
+
         ss::view(x) = qTt;
 
         return true;
@@ -74,6 +78,8 @@ namespace ss
         const ndspan<T> y,
         ndspan<T> x)
     {
+        const T p{ 0.9 };
+
         auto Q = QR.q();
         auto R = QR.r();
 
@@ -84,23 +90,28 @@ namespace ss
         size_t N = dim<0>(x);
 
         /* initialize the result */
-        view(x) = T{0};
+        view(x) = T{ 0 };
 
         xt::xtensor<T, 1> w = xt::ones<T>({ N });
         xt::xtensor<T, 1> xnext = xt::ones<T>({ N });
 
-        T eps{1};
-        std::uint32_t iter{0u};
-        const T p{0.9};
+        std::uint32_t iter{ 0u };
+        bool spd_error{ false };
+        T abstol{ 1.0 };
+        T eps{ 1 };
 
         do {
             /* update x */
             if (!irls_newton(as_span(R), as_span(Q), y, as_span(w), as_span(xnext))) {
-                printf("##### spd\n");
-                return { iter, eps, true };
+                spd_error = true;
+                break;
             }
 
-            threshold(as_span(xnext), tolerance, T{0});
+            /* use tolerance as a proportion of the max value of x */
+            abstol = max(xnext) * tolerance;
+
+            /* threshold and normalize */
+            threshold(xnext, abstol, T{ 0 });
             view(x) = xnext;
 
             /* find the second largest abs value of x */
@@ -115,12 +126,12 @@ namespace ss
 
             iter++;
         }
-        while (iter < max_iter && xnext(1) > tolerance);
+        while (iter < max_iter && xnext(1) > abstol);
 
         /* finally, normalize x */
         view(x) /= xt::sum(x);
 
-        return { iter, eps, false };
+        return { iter, eps, spd_error };
     }
 
     template <> kernelpp::variant<irls_report, error_code>
