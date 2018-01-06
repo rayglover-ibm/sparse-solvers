@@ -29,21 +29,21 @@ limitations under the License.  */
 
 namespace ss
 {
-    template<typename T>
+    template <typename T>
     T inf_norm(const ndspan<T> v, size_t* idx)
     {
         *idx = blas::ixamax(dim<0>(v), v.storage_cbegin(), 1);
         return std::abs(v[*idx]);
     }
 
-    template<typename T>
+    template <typename T>
     T inf_norm(const ndspan<T> v)
     {
         size_t idx;
         return inf_norm(v, &idx);
     }
 
-    template<typename T>
+    template <typename T>
     void vec_subset(
         const xt::xtensor<T, 1>& X,
         const rank_index<uint32_t>& indices,
@@ -66,7 +66,7 @@ namespace ss
         }
     }
 
-    template<typename T>
+    template <typename T>
     void expand(
         xt::xtensor<T, 1>& direction,
         const rank_index<uint32_t>& indices)
@@ -84,7 +84,7 @@ namespace ss
         while (i >= 0) { direction[i--] = T(0); }
     }
 
-    template<typename T>
+    template <typename T>
     void residual_vector(
         const mat_view<T> A,
         const ndspan<T> y,
@@ -98,7 +98,7 @@ namespace ss
         blas::xgemv<T>(CblasTrans,    1.0, A, A_x,        0.0, c);
     }
 
-    template<typename T>
+    template <typename T>
     std::pair<T, size_t> find_max_gamma(
         const mat_view<T> A,
         const ndspan<T> c,
