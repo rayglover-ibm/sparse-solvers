@@ -209,29 +209,30 @@ namespace
         T noise_level,
         int P)
     {
+        xt::random::seed(0);
         const T ERROR = noise_level;
 
         std::vector<T> data(M, T{0});
         std::iota(data.begin(), data.end(), 1);
 
+        xtensor<T, 2> noise = xt::zeros<T>({ M, N });
+
         /* given m numbers, produce n permutations, one
            in each column of the sensing matrix */
         std::vector<T> col = data;
-        xtensor<T, 2> noise = xt::zeros<T>({ M, N });
-        
-        for (int n{0}; n < N; n++)
-        {
+        for (int n{0}; n < N; n++, ::permute(col, P)) {
             xt::view(noise, xt::all(), n) = as_span(col);
-            ::permute(col, P);
         }
 
         /* find each column */
         Solver<T> solver(as_span(noise));
         xtensor<T, 1> x = xt::zeros<T>({ N });
         
-        for (int n{0}; n < N; n++)
+        for (int n{0}; n < N; n++, ::permute(data, P))
         {
-            auto result = solver.solve(as_span(data), ERROR, N, as_span(x));
+            xtensor<T, 1> signal = as_span(data) + xt::random::randn({ M }, T{ 0 }, noise_level);
+
+            auto result = solver.solve(as_span(signal), ERROR, N, as_span(x));
             ::check_report(result, ERROR, N);
 
             /* argmax(x) == n */
@@ -240,8 +241,6 @@ namespace
                     << "\n  x =" << x
                     << '\n';                
             }
-
-            ::permute(data, P);
         }
     }
 }

@@ -47,5 +47,5 @@ TEST(homotopy, noisy_patterns_test)
 
 TEST(homotopy, permutations)
 {
-    ::permutations_test<ss::homotopy, float>(10, 10, 0.25f, 10);
+    ::permutations_test<ss::homotopy, float>(10, 10, 0.2f, 10);
 }
