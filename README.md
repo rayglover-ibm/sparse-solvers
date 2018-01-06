@@ -17,17 +17,17 @@ import numpy as np
 
 N = 10
 
-# create a (square) sensing matrix
+# Create an example sensing matrix
 A = np.random.normal(loc=0.025, scale=0.025, size=(N, N)) + np.identity(N)
 
 # An incoming signal
 signal = np.zeros(N)
 signal[2] = 1
 
-# use the homotopy solver to produce solution, x.
-x, info = ss.Homotopy().solve(A, signal, tolerance=0.1)
+# Use the homotopy solver to produce sparse solution, x.
+x, info = ss.Homotopy(A).solve(signal, tolerance=0.1)
 
-# example output: error=0.064195, sparsity=0.9, argmax=2
+# Example output: error=0.064195, sparsity=0.9, argmax=2
 print("error=%f, sparsity=%f, argmax=%i" % (
     info.solution_error, 1 - np.count_nonzero(x) / np.double(N),
     np.argmax(x)))
