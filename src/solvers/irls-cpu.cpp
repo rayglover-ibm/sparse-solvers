@@ -36,11 +36,6 @@ namespace ss
         }
     }
 
-    template <typename E>
-    auto max(const E& e) {
-        return *std::max_element(e.cbegin(), e.cend());
-    }
-
     template <typename T>
     bool irls_newton(
         const ndspan<T, 2> R,
@@ -108,7 +103,7 @@ namespace ss
             }
 
             /* use tolerance as a proportion of the max value of x */
-            abstol = max(xnext) * tolerance;
+            abstol = xt::amax(xnext)() * tolerance;
 
             /* threshold and normalize */
             threshold(xnext, abstol, T{ 0 });
