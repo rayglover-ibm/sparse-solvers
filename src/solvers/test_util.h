@@ -155,7 +155,6 @@ namespace
         ss::ndspan<T, 1> s = as_span(signal);
         ::l1(s);
 
-        int failures = 0;
         for (uint32_t n = 0; n < N; n++)
         {
             xt::xtensor<T, 2> haystack = noise;
