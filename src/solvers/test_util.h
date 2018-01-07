@@ -206,40 +206,53 @@ namespace
     void permutations_test(
         uint32_t M,
         uint32_t N,
-        T noise_level,
-        int P)
+        T signal_noise = 0.0,
+        T sensing_noise = 0.0,
+        int skip = 1)
     {
+        xt::print_options::set_precision(4);
+        xt::print_options::set_line_width(300);
         xt::random::seed(0);
-        const T ERROR = noise_level;
 
-        std::vector<T> data(M, T{0});
-        std::iota(data.begin(), data.end(), 1);
+        /* error level for the solver */
+        T ERROR = signal_noise + sensing_noise;
 
-        xtensor<T, 2> noise = xt::zeros<T>({ M, N });
+        /* initialize the first permutation */
+        std::vector<T> colbuff(M, T{0});
+        std::iota(colbuff.begin(), colbuff.end(), 1);
+        ::permute(colbuff, skip);
 
-        /* given m numbers, produce n permutations, one
-           in each column of the sensing matrix */
-        std::vector<T> col = data;
-        for (int n{0}; n < N; n++, ::permute(col, P)) {
-            xt::view(noise, xt::all(), n) = as_span(col);
+        /* sensing matrix of permutations */
+        xtensor<T, 2> A = xt::random::randn({ M, N }, T{ 0 }, sensing_noise);
+        {
+            /* given m numbers, produce n permutations, one
+               in each column of the sensing matrix */
+            std::vector<T> col = colbuff;
+            for (int n{0}; n < N; n++, ::permute(col, skip)) {
+                xt::view(A, xt::all(), n) += as_span(col);
+            }
         }
 
-        /* find each column */
-        Solver<T> solver(as_span(noise));
-        xtensor<T, 1> x = xt::zeros<T>({ N });
+        Solver<T> solver(as_span(A));
         
-        for (int n{0}; n < N; n++, ::permute(data, P))
+        /* find each permutation */
+        for (int n{0}; n < N; n++, ::permute(colbuff, skip))
         {
-            xtensor<T, 1> signal = as_span(data) + xt::random::randn({ M }, T{ 0 }, noise_level);
+            xtensor<T, 1> signal = as_span(colbuff) + xt::random::randn({ M }, T{ 0 }, signal_noise);
+            xtensor<T, 1> x = xt::zeros<T>({ N });
 
             auto result = solver.solve(as_span(signal), ERROR, N, as_span(x));
             ::check_report(result, ERROR, N);
 
             /* argmax(x) == n */
             if (xt::argmax(x)() != n) {
+                xtensor<T, 1> b = xt::zeros<T>({ M });
+                ss::reconstruct_signal(as_span(A), as_span(x), as_span(b));
+
                 ADD_FAILURE() << "Solution for signal " << n << " failed:"
-                    << "\n  x =" << x
-                    << '\n';                
+                    << "\n     x =" << x
+                    << "\n  Ax-b =" << (b-signal)
+                    << '\n';
             }
         }
     }

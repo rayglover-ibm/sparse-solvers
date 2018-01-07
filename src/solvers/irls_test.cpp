@@ -42,5 +42,6 @@ TEST(irls, noisy_signal)
 
 TEST(irls, permutations)
 {
-    ::permutations_test<ss::irls, double>(5, 5, 0.2f, 6); /* M == N */
+    ::permutations_test<ss::irls, float>(4, 4, 0.1f, 0.1f, 10);
+    ::permutations_test<ss::irls, double>(5, 5, 0.1f, 0.1f, 10);
 }

@@ -60,7 +60,7 @@ namespace ss
     template <typename T>
     void sign(ndspan<T> x, const T tol) {
         for (T& val : x) {
-            if      (val > tol)  { val =  1; }
+            if      (val >  tol) { val =  1; }
             else if (val < -tol) { val = -1; }
             else                 { val =  0; }
         }
@@ -89,8 +89,7 @@ namespace ss
         const mat_view<T> A,
         const ndspan<T> y,
         const ndspan<T> x_previous,
-        ndspan<T> c
-        )
+        ndspan<T> c)
     {
         xt::xtensor<T, 1> A_x = y;
 
@@ -105,8 +104,7 @@ namespace ss
         const ndspan<T> x,
         const ndspan<T> direction,
         const T c_inf,
-        const rank_index<uint32_t>& lambda_indices
-        )
+        const rank_index<uint32_t>& lambda_indices)
     {
         assert(lambda_indices.size() <= dim<1>(A));
 
@@ -190,8 +188,7 @@ namespace ss
         const std::uint32_t max_iter,
         const T tolerance,
         const ndspan<T> y,
-        ndspan<T> x
-        )
+        ndspan<T> x)
     {
         assert(max_iter > 0
             && y.size() == dim<0>(A)
