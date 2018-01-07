@@ -21,7 +21,7 @@ limitations under the License.  */
 namespace ss
 {
     /* Homotopy ------------------------------------------------------------ */
-    
+
     struct homotopy_report
     {
         /* the number of iterations performed. */
@@ -38,13 +38,13 @@ namespace ss
     struct homotopy_policy
     {
         using report_type = homotopy_report;
-        
+
         template <typename T> using state_type = const ndspan<T, 2>;
-        
-        kernelpp::maybe<homotopy_report> run(
+
+        static kernelpp::maybe<homotopy_report> run(
             state_type<float>&, const ndspan<float>, float, uint32_t, ndspan<float>);
 
-        kernelpp::maybe<homotopy_report> run(
+        static kernelpp::maybe<homotopy_report> run(
             state_type<double>&, const ndspan<double>, double, uint32_t, ndspan<double>);
 
         homotopy_policy();
@@ -78,28 +78,23 @@ namespace ss
     {
         irls_state(const ndspan<float, 2>);
         irls_state(const ndspan<double, 2>);
-        
+
         ~irls_state();
-        
+
         xtl::any QR;
     };
 
-    /* A solver policy which implements the iteratively reweighted least squares method */
+    /* A solver policy which implements the Iteratively Reweighted Least Squares method */
     struct irls_policy
     {
         using report_type = irls_report;
-        
-        template <typename T> using state_type = irls_state;
-        
-        kernelpp::maybe<irls_report> run(
+
+        template <typename> using state_type = irls_state;
+
+        static kernelpp::maybe<irls_report> run(
             state_type<float>&, const ndspan<float>, float, uint32_t, ndspan<float>);
 
-        kernelpp::maybe<irls_report> run(
+        static kernelpp::maybe<irls_report> run(
             state_type<double>&, const ndspan<double>, double, uint32_t, ndspan<double>);
-
-        irls_policy();
-        irls_policy(irls_policy&&);
-
-        ~irls_policy();
     };
 }

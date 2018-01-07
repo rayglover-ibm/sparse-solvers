@@ -25,7 +25,7 @@ namespace ss
     /* Solver base --------------------------------------------------------- */
 
     template <typename T, typename SolverPolicy>
-    struct solver : private SolverPolicy
+    struct solver
     {   
         using report_type  = typename SolverPolicy::report_type;
         using state_type   = typename SolverPolicy::template state_type<T>;
@@ -47,8 +47,7 @@ namespace ss
          *
          *    returns : an instance of report_type, or an error
          */
-        solve_result solve(
-            const ndspan<T> y, T tol, std::uint32_t max_iterations, ndspan<T> x);
+        solve_result solve(const ndspan<T> y, T tol, std::uint32_t max_iterations, ndspan<T> x);
 
         solver(solver<T, SolverPolicy>&& other) : m{ std::move(other.m) } {}
 
@@ -99,7 +98,12 @@ namespace ss
     template <typename T, typename S>
     solver<T, S>::solver(const ndspan<T, 2> A)
         : m(std::make_unique<state_type>(A))
-    {}
+    {
+        static_assert(
+            detail::is_solver<S, T>::value,
+            "The specified solver policy does not implment the required interface"
+        );
+    }
 
     template <typename T, typename S>
     typename solver<T, S>::solve_result solver<T, S>::solve(
@@ -108,10 +112,6 @@ namespace ss
               std::uint32_t max_iterations,
               ndspan<T>     x)
     {
-        static_assert(
-            detail::is_solvable<S, T>::value,
-            "The specified type is not supported by the current solver"
-        );
         return S::run(*m, y, tolerance, max_iterations, x);
     }
 }

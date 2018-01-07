@@ -27,10 +27,6 @@ namespace ss
 {
     /* Homotopy solver ----------------------------------------------------- */
 
-    homotopy_policy::homotopy_policy() = default;
-    homotopy_policy::homotopy_policy(homotopy_policy&&) = default;
-    homotopy_policy::~homotopy_policy() = default;
-
     kernelpp::maybe<ss::homotopy_report> homotopy_policy::run(
         const ndspan<float, 2>& A,
         const ndspan<float> y,
@@ -61,10 +57,6 @@ namespace ss
     }
         
     irls_state::~irls_state() = default;
-
-    irls_policy::irls_policy() = default;
-    irls_policy::irls_policy(irls_policy&&) = default;
-    irls_policy::~irls_policy() = default;
 
     kernelpp::maybe<irls_report> irls_policy::run(
         irls_state& state, const ndspan<float> y, float tol, uint32_t maxiter, ndspan<float> x)

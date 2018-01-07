@@ -27,16 +27,14 @@ namespace ss {
          */
         template <typename P, typename T>
         using solvable = decltype(
-            declval<P>().run(
-                declval<typename P::template state_type<T>&>(),
-                declval<ndspan<T>>(), T{0}, std::size_t{0},
-                declval<ndspan<T>>())
-            );
+            P::run(declval<typename P::template state_type<T>&>(),
+                   declval<ndspan<T>>(), T{0}, std::size_t{0},
+                   declval<ndspan<T>>()));
         
         template <typename P, typename T, typename = void>
-        struct is_solvable : std::false_type {};
-
+        struct is_solver : std::false_type {};
+        
         template <typename P, typename T>
-        struct is_solvable <P, T, xt::void_t<solvable<P, T>> > : std::true_type {};    
+        struct is_solver <P, T, xt::void_t<solvable<P, T>>> : std::true_type {};
     }
 }
