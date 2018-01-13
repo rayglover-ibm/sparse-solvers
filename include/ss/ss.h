@@ -101,8 +101,7 @@ namespace ss
     {
         static_assert(
             detail::is_solver<S, T>::value,
-            "The specified solver policy does not implment the required interface"
-        );
+            "The specified solver policy does not implment the required interface");
     }
 
     template <typename T, typename S>

@@ -117,7 +117,7 @@ namespace ss
                 hvec(k) += T{1};
 
                 /* Apply transformation to remaining columns. */
-                view(s) = T(0);
+                view(s) = T{0};
                 for (m = k; m < M; m++) {
                     for (n = k + 1; n < N; n++) {
                         s(n) += hvec(m) * _qr(m, n);
@@ -180,6 +180,7 @@ namespace ss
 
         for (int64_t m = 0; m < N; m++) {
             r(m, m) = _rdiag(m);
+
             for (int64_t n = m + 1; n < N; n++) {
                 r(m, n) = _qr(m, n);
             }

@@ -24,14 +24,14 @@ namespace ss
 
     struct homotopy_report
     {
-        /* the number of iterations performed. */
+        /* The number of iterations performed. */
         uint32_t iter;
 
-        /* the solution error */
+        /* The solution error */
         double solution_error;
     };
 
-    /* make std::variant happy */
+    /* Make std::variant happy */
     inline bool operator== (const homotopy_report&, const homotopy_report&) { return false; }
 
     /* A solver policy which implements the homotopy method */
@@ -57,15 +57,15 @@ namespace ss
 
     struct irls_report
     {
-        /* the number of iterations performed. */
+        /* The number of iterations performed. */
         uint32_t iter;
 
-        /* the solution error */
+        /* The solution error */
         double solution_error;
 
-        /* whether the IRLS failed because an iteration was evaluating
-         * a matrix which is not symmetric positive definite, i.e. it doesn't
-         * have a full cholesky decomposition.
+        /*  Whether the IRLS failed because an iteration was evaluating
+         *  a matrix which is not symmetric positive definite, i.e. it doesn't
+         *  have a full cholesky decomposition.
          */
         bool spd_failure;
     };
