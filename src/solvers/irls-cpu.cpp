@@ -51,17 +51,11 @@ namespace ss
         if (!chol.isspd()) { return false; }
 
         auto qTb = blas::xgemv(CblasTrans, T{1}, Q, y);
-        auto s = xt::xtensor<T, 1>::from_shape({ dim<0>(qTb) });
-        chol.solve(qTb, s);
-
+        auto s = chol.solve(qTb);
         auto t = blas::xgemv(CblasNoTrans, T{1}, Q, s);
-        auto qTt = blas::xgemv(CblasTrans, T{1}, Q, t);
-
-        blas::xtrsm(CblasUpper, CblasNoTrans, CblasNonUnit, T{1},
-            R, ss::as_span(qTt));
-
-        ss::view(x) = qTt;
-
+        
+        blas::xgemv(CblasTrans, T{1}, Q, t, T{0}, x);
+        blas::xtrsm(CblasUpper, CblasNoTrans, CblasNonUnit, T{1}, R, x);
         return true;
     }
 
