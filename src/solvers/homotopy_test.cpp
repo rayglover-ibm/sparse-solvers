@@ -47,6 +47,15 @@ TEST(homotopy, noisy_patterns_test)
 
 TEST(homotopy, permutations)
 {
+    /* square */
     ::permutations_test<ss::homotopy, float>(10, 10, .1f, .1f, 10);
     ::permutations_test<ss::homotopy, double>(10, 10, .1f, .1f, 10);
+    
+    /* overdetermined */
+    ::permutations_test<ss::homotopy, float>(25, 10, .1f, .1f, 25);
+    ::permutations_test<ss::homotopy, double>(25, 10, .1f, .1f, 25);
+
+    /* underdetermined */
+    ::permutations_test<ss::homotopy, float>(10, 25, .05f, .05f, 25);
+    ::permutations_test<ss::homotopy, double>(10, 25, .05f, .05f, 25);
 }

@@ -42,6 +42,13 @@ TEST(irls, noisy_signal)
 
 TEST(irls, permutations)
 {
-    ::permutations_test<ss::irls, float>(4, 4, 0.1f, 0.1f, 10);
-    ::permutations_test<ss::irls, double>(5, 5, 0.1f, 0.1f, 10);
+    /* square */
+    ::permutations_test<ss::irls, float>(4, 4, .1f, .1f, 10);
+    ::permutations_test<ss::irls, double>(5, 5, .1f, .1f, 10);
+
+    /* overdetermined */
+    ::permutations_test<ss::irls, float>(10, 5, .1f, .1f, 10);
+    ::permutations_test<ss::irls, double>(10, 5, .1f, .1f, 20);
+
+    /* TODO(rayg): underdetermined systems not supported by this solver */
 }
