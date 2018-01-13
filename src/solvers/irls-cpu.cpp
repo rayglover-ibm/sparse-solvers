@@ -51,7 +51,7 @@ namespace ss
         if (!chol.isspd()) { return false; }
 
         auto qTb = blas::xgemv(CblasTrans, T{1}, Q, y);
-        auto s = xt::xtensor<T, 1>::from_shape(y.shape());
+        auto s = xt::xtensor<T, 1>::from_shape({ dim<0>(qTb) });
         chol.solve(qTb, s);
 
         auto t = blas::xgemv(CblasNoTrans, T{1}, Q, s);
