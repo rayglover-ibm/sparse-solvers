@@ -39,6 +39,9 @@ namespace ss
         template <typename B, typename X>
         void solve(const B& b, X& x) const { solve(as_span(b), as_span(x)); }
 
+        template <typename B>
+        xt::xtensor<T, 1> solve(const B& b) const;
+
         bool isspd() { return _isspd; }
 
       private:
@@ -97,5 +100,14 @@ namespace ss
         
         blas::xtrsv(CblasLower, CblasNoTrans, CblasNonUnit, as_span(_l), x);
         blas::xtrsv(CblasLower, CblasTrans, CblasNonUnit, as_span(_l), x);
+    }
+
+    template <typename T>
+    template <typename B>
+    xt::xtensor<T, 1> cholesky_decomposition<T>::solve(const B& b) const
+    {
+        auto x = xt::xtensor<T, 1>::from_shape({ dim<0>(b) });
+        solve(as_span(b), as_span(x));
+        return x;
     }
 }
