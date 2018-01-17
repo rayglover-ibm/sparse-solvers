@@ -57,8 +57,8 @@ def find_max_gamma(A, y, x, dir_vec, c_inf, lambda_indices):
 
     # evaluate the eligible elements of transpose(A) * A * dir_vec
     M, N = A.shape
-    AstarA = np.dot(np.matrix.transpose(A), A)
-    AstarAd = np.dot(AstarA, dir_vec)             #evaluate transpose(A) * A * d
+    AstarA = np.dot(A.T, A)
+    AstarAd = np.dot(AstarA, dir_vec)
 
     # evaluate the eligible elements of the residual vector
     res_vec = residual_vector(A, y, x)
@@ -68,34 +68,34 @@ def find_max_gamma(A, y, x, dir_vec, c_inf, lambda_indices):
     current_minimal = np.inf
 
     # find the minimum term and its index
-    for ell in range(0, N):
+    for n in range(0, N):
         previous_minimal = current_minimal
-        if lambda_indices[ell]:
-            minT = -x[ell] / dir_vec[ell]
+        if lambda_indices[n]:
+            minT = -x[n] / dir_vec[n]
             if minT > 0.0 and minT < current_minimal:
                 current_minimal = minT
         else:
-            left_test = math.fabs(1.0 - AstarAd[ell])
-            right_test = math.fabs(1.0 + AstarAd[ell])
+            left_test = math.fabs(1.0 - AstarAd[n])
+            right_test = math.fabs(1.0 + AstarAd[n])
             if left_test > 0:
-                leftT = (c_inf - res_vec[ell]) / (1.0 - AstarAd[ell])
+                leftT = (c_inf - res_vec[n]) / (1.0 - AstarAd[n])
                 if leftT > 0.0 and leftT < current_minimal:
                     current_minimal = leftT
             if right_test > 0:
-                rightT = (c_inf + res_vec[ell]) / (1.0 + AstarAd[ell])
+                rightT = (c_inf + res_vec[n]) / (1.0 + AstarAd[n])
                 if rightT > 0.0 and rightT < current_minimal:
                     current_minimal = rightT
 
         if previous_minimal > current_minimal:
-            idx = ell
+            idx = n
 
     # return the min bound on gamma and the corresponding index of x
     if lambda_indices[idx]:
         lambda_indices[idx] = False
-        return current_minimal, idx, lambda_indices, False
+        return current_minimal, idx, False
     else:
         lambda_indices[idx] = True
-        return current_minimal, idx, lambda_indices, True
+        return current_minimal, idx, True
 
 def update_x(A, y, x, direction, c_inf, lambda_indices):
     """
@@ -113,7 +113,7 @@ def update_x(A, y, x, direction, c_inf, lambda_indices):
 
     returns: the new approximation to the solution x^(j) and the updated support lambda_indices
     """
-    gamma, new_index, lambda_indices, add = find_max_gamma(
+    gamma, new_index, add = find_max_gamma(
         A, y, x, direction, c_inf, lambda_indices)
 
     x_next = gamma * direction
@@ -147,12 +147,10 @@ def homotopy_update(A, y, N_iter, tolerance):
     c = residual_vector(A, y, x)
 
     # initialise lambda = ||c||_inf
-    c_inf = (np.linalg.norm(c, np.inf))
+    c_inf = np.linalg.norm(c, np.inf)
 
     # initialise vector to hold indices of maximum absolute values
     lambda_indices = np.array([False] * N, dtype=bool)
-
-    ###### NB ONLY FIRST MAX VALUE RETURNED; IF LIKELY TO BE MULTIPLE NEED TO CHANGE THIS BIT ######
     lambda_indices[np.argmax(np.abs(c))] = True
 
     # evaluate the first direction vector
@@ -164,7 +162,7 @@ def homotopy_update(A, y, N_iter, tolerance):
     direction[lambda_indices] = invAtA * helper.sign_vector(c_gamma)
 
     # update x
-    gamma, new_index, lambda_indices, add = find_max_gamma(
+    gamma, new_index, add = find_max_gamma(
         A, y, x, direction, c_inf, lambda_indices)
 
     x += gamma * direction
@@ -186,17 +184,17 @@ def homotopy_update(A, y, N_iter, tolerance):
         direction[lambda_indices] = np.dot(invAtA, helper.sign_vector(c_gamma))
 
         # find lambda (i.e., infinity norm of residual vector)
-        c_inf = (np.linalg.norm(c, np.inf))
+        c_inf = np.linalg.norm(c, np.inf)
 
         # print update
         print ("iteration {}\n  cinf={}\n  c={}\n  x={}\n".format(i, c_inf, c, x))
 
         # check if infinity norm of residual vector is within tolerance yet
-        if np.linalg.norm(c, np.inf) < tolerance:
+        if c_inf < tolerance:
             break
 
         # update gamma and x
-        gamma, new_index, lambda_indices, add = find_max_gamma(
+        gamma, new_index, add = find_max_gamma(
             A, y, x, direction, c_inf, lambda_indices)
         
         x += gamma * direction
