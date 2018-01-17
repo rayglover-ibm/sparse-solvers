@@ -47,8 +47,7 @@ namespace ss
     void vec_subset(
         const xt::xtensor<T, 1>& X,
         const rank_index<uint32_t>& indices,
-        xt::xtensor<T, 1>& X_subset
-        )
+        xt::xtensor<T, 1>& X_subset)
     {
         size_t n = 0;
         for (const uint32_t i : indices) {
@@ -58,7 +57,8 @@ namespace ss
     }
 
     template <typename T>
-    void sign(ndspan<T> x, const T tol) {
+    void sign(ndspan<T> x, const T tol)
+    {
         for (T& val : x) {
             if      (val >  tol) { val =  1; }
             else if (val < -tol) { val = -1; }

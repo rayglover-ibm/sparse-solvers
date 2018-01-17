@@ -52,10 +52,10 @@ TEST(homotopy, permutations)
     ::permutations_test<ss::homotopy, double>(10, 10, .1f, .1f, 10);
     
     /* overdetermined */
-    ::permutations_test<ss::homotopy, float>(25, 10, .1f, .1f, 25);
-    ::permutations_test<ss::homotopy, double>(25, 10, .1f, .1f, 25);
+    ::permutations_test<ss::homotopy, float>(25, 10, .1f, .1f, 50);
+    ::permutations_test<ss::homotopy, double>(25, 10, .1f, .1f, 50);
 
     /* underdetermined */
-    ::permutations_test<ss::homotopy, float>(10, 25, .05f, .05f, 25);
-    ::permutations_test<ss::homotopy, double>(10, 25, .05f, .05f, 25);
+    ::permutations_test<ss::homotopy, float>(10, 25, .05f, .05f, 50);
+    ::permutations_test<ss::homotopy, double>(10, 25, .05f, .05f, 50);
 }
