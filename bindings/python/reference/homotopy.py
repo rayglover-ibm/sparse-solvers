@@ -51,8 +51,8 @@ def find_max_gamma(A, y, x, dir_vec, c_inf, lambda_indices):
         c_inf: infinite norm of residual vector
         lambda_indices: indices of support in current solution x
 
-    returns: the updated set of lambda_indices, and
-            the new gamma-value (i.e., the magnitude of new path segement)
+    returns: the new gamma-value (i.e., the magnitude of new path segement)
+             and its corresponding index in x
     """
 
     # evaluate the eligible elements of transpose(A) * A * dir_vec
@@ -111,13 +111,13 @@ def update_x(A, y, x, direction, c_inf, lambda_indices):
         c_inf: the infinite norm of the residual vector
         lambda_indices: indices of support in current solution x
 
-    returns: the new approximation to the solution x^(j) and the updated support lambda_indices
+    returns: the index of the corresponding change in lambda_indices
     """
-    gamma, new_index, add = find_max_gamma(
+    gamma, idx, add = find_max_gamma(
         A, y, x, direction, c_inf, lambda_indices)
 
-    x_next = gamma * direction
-    return x_next, lambda_indices
+    x += gamma * direction
+    return idx
 
 def homotopy_update(A, y, N_iter, tolerance):
     """
@@ -156,32 +156,29 @@ def homotopy_update(A, y, N_iter, tolerance):
     # evaluate the first direction vector
     A_gamma = A[:, lambda_indices]
     c_gamma = c[lambda_indices]
-    invAtA = 1.0 / (np.linalg.norm(A_gamma) * np.linalg.norm(A_gamma))
+    invAtA = 1.0 / (np.linalg.norm(A_gamma) ** 2)
 
     direction = np.zeros(N)
-    direction[lambda_indices] = invAtA * helper.sign_vector(c_gamma)
+    direction[lambda_indices] = invAtA * helper.sign(c_gamma, tolerance=tolerance)
 
-    # update x
-    gamma, new_index, add = find_max_gamma(
-        A, y, x, direction, c_inf, lambda_indices)
-
-    x += gamma * direction
-    
-    effective_index = sum(lambda_indices[0:new_index])
+    k = update_x(A, y, x, direction, c_inf, lambda_indices)
+    effective_index = sum(lambda_indices[0:k])
 
     # evaluate homotopy path segments in iterations
     for i in range(0, N_iter):
         # update A_gamma and inverse_A_gamma
-        invAtA = upd_inv.one_col_inv(A_gamma, invAtA, effective_index, A[:, new_index], add)
+        invAtA = upd_inv.one_col_inv(
+            A_gamma, invAtA, effective_index, A[:, k], lambda_indices[k])
+        
         A_gamma = A[:, lambda_indices]
 
         # update residual vector
         c = residual_vector(A, y, x)
-        c_gamma = c[lambda_indices] # helper.subset_array(c, lambda_indices)
+        c_gamma = c[lambda_indices]
 
         # update direction vector
         direction.fill(0)
-        direction[lambda_indices] = np.dot(invAtA, helper.sign_vector(c_gamma))
+        direction[lambda_indices] = np.dot(invAtA, helper.sign(c_gamma, tolerance=tolerance))
 
         # find lambda (i.e., infinity norm of residual vector)
         c_inf = np.linalg.norm(c, np.inf)
@@ -193,14 +190,10 @@ def homotopy_update(A, y, N_iter, tolerance):
         if c_inf < tolerance:
             break
 
-        # update gamma and x
-        gamma, new_index, add = find_max_gamma(
-            A, y, x, direction, c_inf, lambda_indices)
-        
-        x += gamma * direction
+        k = update_x(A, y, x, direction, c_inf, lambda_indices)
 
         # find where in A_gamma the new index fits in
-        effective_index = sum(lambda_indices[0:new_index])
+        effective_index = sum(lambda_indices[0:k])
 
     return x
 
