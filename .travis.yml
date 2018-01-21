@@ -30,7 +30,7 @@ matrix:
     
     # -- python 3.5
     - os: linux
-      env: BUILD_TYPE=Release PYTHON=3.5 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
+      env: BUILD_TYPE=Release PYTHON=3.5.0 CMAKE_EXTRA_ARGS="-Dsparsesolvers_WITH_PYTHON=ON"
       addons:
         apt:
           sources: *ubuntu-sources
@@ -87,7 +87,7 @@ after_success:
       cmake --build . --target bdist_wheel
       pushd bindings/python
       # -- auditwheel is python 3 only
-      pyenv global 3.5
+      pyenv global 3.5.0
       pip install --user auditwheel==1.5.0 twine
       # -- PEP 513: use auditwheel for Portable Linux Built Distributions
       auditwheel repair --wheel-dir ./dist-repair `find . -name "*x86_64.whl" | head -n 1`
