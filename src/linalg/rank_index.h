@@ -17,8 +17,6 @@ limitations under the License.  */
 
 #include <memory>
 #include <vector>
-#include <xtensor/xview.hpp>
-#include <xtensor/xio.hpp>
 
 namespace ss
 {
