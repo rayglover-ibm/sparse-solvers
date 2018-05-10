@@ -61,7 +61,7 @@ install:
       fi
       pyenv install --skip-existing $PYTHON
       pyenv global $PYTHON
-      pip install --user --upgrade pip
+      pip install --user --upgrade pip==9.0.3
       pip install --user numpy wheel 
     fi
 
