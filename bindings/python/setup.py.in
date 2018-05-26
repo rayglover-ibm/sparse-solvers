@@ -35,7 +35,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 
-    long_description_content_type = 'text/markdown',
+    long_description = 'High performance ℓ₁-minimization solvers',
 
     packages = ['${ss}'],
     package_dir={'${ss}':'${ss}'},

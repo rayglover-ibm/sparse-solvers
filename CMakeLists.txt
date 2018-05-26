@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.2)
 cmake_policy (SET CMP0048 NEW) # project versioning
 
-project (core LANGUAGES C CXX VERSION 0.8.6)
+project (core LANGUAGES C CXX VERSION 0.8.7)
 
 set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
