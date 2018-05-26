@@ -88,7 +88,7 @@ after_success:
       pushd bindings/python
       # -- auditwheel is python 3 only
       pyenv global 3.6
-      pip install --user auditwheel==1.5.0 twine
+      pip install --user auditwheel==1.5.0 twine setuptools
       # -- PEP 513: use auditwheel for Portable Linux Built Distributions
       auditwheel repair --wheel-dir ./dist-repair `find . -name "*x86_64.whl" | head -n 1`
       if [ $? -eq 0 ]; then

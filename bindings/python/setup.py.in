@@ -35,6 +35,8 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 
+    long_description_content_type = 'text/markdown',
+
     packages = ['${ss}'],
     package_dir={'${ss}':'${ss}'},
 
