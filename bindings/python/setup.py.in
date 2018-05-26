@@ -38,8 +38,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 
-    long_description=readme_text,
-    long_description_content_type='text/markdown',
+    long_description = readme_text,
 
     packages = ['${ss}'],
     package_dir={'${ss}':'${ss}'},

@@ -1,31 +1,40 @@
-#${ss}
+${ss}
+-------
 
-```python
-import sparsesolvers as ss
-import numpy as np
+.. code:: python
 
-N = 10
+   import sparsesolvers as ss
+   import numpy as np
 
-# Create an example sensing matrix
-A = np.random.normal(loc=0.025, scale=0.025, size=(N, N)) + np.identity(N)
+   N = 10
 
-# An incoming signal
-signal = np.zeros(N)
-signal[2] = 1
+   # Create an example sensing matrix
+   A = np.random.normal(loc=0.025, scale=0.025, size=(N, N)) + np.identity(N)
 
-# Use the homotopy solver to produce sparse solution, x.
-x, info = ss.Homotopy(A).solve(signal, tolerance=0.1)
+   # An incoming signal
+   signal = np.zeros(N)
+   signal[2] = 1
 
-# Example output: error=0.064195, sparsity=0.9, argmax=2
-print("error=%f, sparsity=%f, argmax=%i" % (
-    info.solution_error, 1 - np.count_nonzero(x) / np.double(N),
-    np.argmax(x)))
-```
+   # Use the homotopy solver to produce sparse solution, x.
+   x, info = ss.Homotopy(A).solve(signal, tolerance=0.1)
 
-## References
+   # Example output: error=0.064195, sparsity=0.9, argmax=2
+   print("error=%f, sparsity=%f, argmax=%i" % (
+       info.solution_error, 1 - np.count_nonzero(x) / np.double(N),
+       np.argmax(x)))
 
-1. _A. Y. Yang, Z. Zhou, A. Ganesh, S. S. Sastry, and Y. Ma_ – __Fast ℓ₁-minimization Algorithms For Robust Face Recognition__ – IEEE Trans. Image Processing, vol. 22, pp. 3234–3246, Aug 2013.
+References
+----------
 
-2. _R. Chartrand, W. Yin_ – __Iteratively Reweighted Algorithms For Compressive Sensing__ – Acoustics Speech and Signal Processing 2008. ICASSP 2008. IEEE International Conference, pp. 3869-3872, March 2008.
+1. *A. Y. Yang, Z. Zhou, A. Ganesh, S. S. Sastry, and Y. Ma* – **Fast
+   ℓ₁-minimization Algorithms For Robust Face Recognition** – IEEE
+   Trans. Image Processing, vol. 22, pp. 3234–3246, Aug 2013.
 
-3. _D. O’Leary_ – __Robust Regression Computation Using Iteratively Reweighted Least Squares__ – Society for Industrial and Applied Mathematics, 1990
+2. *R. Chartrand, W. Yin* – **Iteratively Reweighted Algorithms For
+   Compressive Sensing** – Acoustics Speech and Signal Processing 2008.
+   ICASSP 2008. IEEE International Conference, pp. 3869-3872, March
+   2008.
+
+3. *D. O’Leary* – **Robust Regression Computation Using Iteratively
+   Reweighted Least Squares** – Society for Industrial and Applied
+   Mathematics, 1990
