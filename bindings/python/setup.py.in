@@ -9,9 +9,6 @@ class CMakeDistribution(Distribution):
     def has_ext_modules(self):
         return True
 
-with open('README') as f:
-    readme_text = f.read()
-
 setup(
     name         = '${ss}',
     version      = '${PROJECT_VERSION}',
@@ -37,8 +34,6 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-
-    long_description = readme_text,
 
     packages = ['${ss}'],
     package_dir={'${ss}':'${ss}'},
