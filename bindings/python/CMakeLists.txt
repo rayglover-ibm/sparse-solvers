@@ -26,7 +26,7 @@ target_link_libraries (${binding}
 
 # -- setup.py, readme, manifest
 configure_file (setup.py.in  setup.py)
-configure_file (README.md.in README.md)
+configure_file (README.rst.in README.rst)
 configure_file (MANIFEST.in  MANIFEST.in)
 
 # -- copy other files

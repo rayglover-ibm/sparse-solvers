@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import io
 
 from setuptools import setup
 from distutils.dist import Distribution
@@ -35,7 +36,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 
-    long_description = 'High performance ℓ₁-minimization solvers',
+    long_description = io.open('README.rst', encoding='utf8').read(),
 
     packages = ['${ss}'],
     package_dir={'${ss}':'${ss}'},
