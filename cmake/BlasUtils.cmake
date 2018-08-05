@@ -33,14 +33,20 @@ macro (blas_init target blas_target)
     OpenBLAS_find_archive (BUILD_URL url)
     OpenBLAS_init (BUILD_URL "${url}" COMPONENTS NEHALEM HASWELL)
 
-    add_dependencies (${target}
-        "OpenBLAS::NEHALEM" "OpenBLAS::HASWELL"
-    )
-    set_target_properties (${target} PROPERTIES
-        REQUIRED_RUNTIME_FILES "$<TARGET_FILE:OpenBLAS::NEHALEM>;$<TARGET_FILE:OpenBLAS::HASWELL>"
-    )
     set (BLAS_OpenBLAS 1)
     set (${blas_target} OpenBLAS::NEHALEM)
+
+    foreach (microarch NEHALEM HASWELL)
+        add_dependencies(${target} OpenBLAS::${microarch})
+        # copy shared libs to the target build dir, using unique names
+        set (unique_path "$<TARGET_FILE_DIR:${target}>/$<TARGET_PROPERTY:OpenBLAS::${microarch},UNIQUE_NAME>")
+        add_custom_command (TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:OpenBLAS::${microarch}>" "${unique_path}"
+        )
+        set_property(TARGET ${target}
+            APPEND PROPERTY REQUIRED_RUNTIME_FILES "${unique_path}"
+        )
+    endforeach ()
 endmacro ()
 
 macro (set_rpath target rpath)
